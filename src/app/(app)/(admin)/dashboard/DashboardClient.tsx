@@ -21,11 +21,12 @@ interface DashboardClientProps {
 
 const COLORS = ['#2563eb', '#7c3aed', '#10b981', '#f59e0b', '#ef4444', '#64748b'];
 
-function formatCurrency(value: number): string {
+function formatCurrency(value: any): string {
+    const numericValue = typeof value === 'number' ? value : Number(value) || 0;
     return new Intl.NumberFormat('es-AR', {
         style: 'currency', currency: 'ARS',
         maximumFractionDigits: 0,
-    }).format(value);
+    }).format(numericValue);
 }
 
 export default function DashboardClient({ orders }: DashboardClientProps) {
@@ -102,7 +103,7 @@ export default function DashboardClient({ orders }: DashboardClientProps) {
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                 <XAxis dataKey="month" tick={{ fontSize: 12 }} tickMargin={10} />
                                 <YAxis tickFormatter={(val) => `$${val / 1000}k`} tick={{ fontSize: 12 }} />
-                                <RechartsTooltip formatter={(value: number) => formatCurrency(value)} />
+                                <RechartsTooltip formatter={(value: any) => formatCurrency(value)} />
                                 <Line type="monotone" dataKey="revenue" stroke="#2563eb" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                             </LineChart>
                         </ResponsiveContainer>
@@ -127,7 +128,7 @@ export default function DashboardClient({ orders }: DashboardClientProps) {
                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                         ))}
                                     </Pie>
-                                    <RechartsTooltip formatter={(value: number) => formatCurrency(value)} />
+                                    <RechartsTooltip formatter={(value: any) => formatCurrency(value)} />
                                     <Legend />
                                 </PieChart>
                             </ResponsiveContainer>
@@ -151,7 +152,7 @@ export default function DashboardClient({ orders }: DashboardClientProps) {
                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length + 2]} />
                                         ))}
                                     </Pie>
-                                    <RechartsTooltip formatter={(value: number) => formatCurrency(value)} />
+                                    <RechartsTooltip formatter={(value: any) => formatCurrency(value)} />
                                     <Legend />
                                 </PieChart>
                             </ResponsiveContainer>
