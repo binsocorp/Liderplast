@@ -95,15 +95,29 @@ export function FletesClient({ trips, orders, truckTypes }: FletesClientProps) {
         },
         {
             key: 'orders',
-            label: 'Capacidad (Ctd. Piletas)',
+            label: 'Pedidos / Capacidad',
             render: (row: any) => {
                 const tripOrders = orders.filter((o) => o.trip_id === row.id);
                 const capacity = row.truck_type ? row.truck_type.capacity : 0;
                 const isFull = capacity > 0 && tripOrders.length >= capacity;
                 return (
-                    <span className={`text-sm font-medium ${isFull ? 'text-danger-600' : 'text-gray-600'}`}>
-                        {tripOrders.length} {capacity > 0 ? `/ ${capacity}` : ''}
-                    </span>
+                    <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                            <span className={`text-sm font-bold ${isFull ? 'text-danger-600' : 'text-primary-700'}`}>
+                                {tripOrders.length} {capacity > 0 ? `/ ${capacity}` : ''}
+                            </span>
+                            {isFull && <span className="text-[10px] bg-danger-100 text-danger-700 px-1.5 py-0.5 rounded-full uppercase font-bold">Lleno</span>}
+                        </div>
+                        {tripOrders.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                                {tripOrders.map(o => (
+                                    <span key={o.id} className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border border-gray-200">
+                                        #{o.order_number}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 );
             },
         },
