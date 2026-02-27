@@ -14,18 +14,28 @@ type EntityTable =
     | 'prices'
     | 'installers'
     | 'trips'
-    | 'truck_types';
+    | 'drivers'
+    | 'vehicles'
+    | 'finance_categories'
+    | 'finance_subcategories'
+    | 'finance_payment_methods'
+    | 'finance_vendors'
+    | 'finance_cost_centers';
 
 export async function createEntity(table: EntityTable, data: Record<string, unknown>) {
     const supabase = await createClient();
     const { data: result, error } = await (supabase
         .from(table as any)
         .insert(data as any)
-        .select('id')
+        .select()
         .single() as any);
 
-    if (error) return { error: error.message };
-    revalidatePath(`/master/${table}`);
+    if (error) {
+        console.error(`Error creating ${table}:`, error);
+        return { error: error.message };
+    }
+
+    revalidatePath('/master', 'layout');
     return { data: result };
 }
 
@@ -36,8 +46,12 @@ export async function updateEntity(table: EntityTable, id: string, data: Record<
         .update(data as any)
         .eq('id', id) as any);
 
-    if (error) return { error: error.message };
-    revalidatePath(`/master/${table}`);
+    if (error) {
+        console.error(`Error updating ${table}:`, error);
+        return { error: error.message };
+    }
+
+    revalidatePath('/master', 'layout');
     return { success: true };
 }
 

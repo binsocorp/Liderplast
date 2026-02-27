@@ -1,0 +1,21 @@
+<svg width="200" height="250" viewBox="0 0 200 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="logo_grad" x1="50" y1="50" x2="150" y2="150" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1e3a8a" />
+      <stop offset="100%" stop-color="#1e40af" />
+    </linearGradient>
+    <filter id="shadow" x="0" y="0" width="200%" height="200%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.1" />
+    </filter>
+  </defs>
+  
+  <!-- Outer Ring -->
+  <circle cx="100" cy="100" r="85" stroke="#e5e7eb" stroke-width="2" />
+  <circle cx="100" cy="100" r="75" fill="white" />
+  
+  <!-- LP Monogram -->
+  <path d="M75 60V140M75 100H100M100 100V140M100 100C100 100 125 100 125 120C125 140 100 140 100 140" stroke="url(#logo_grad)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+  
+  <!-- Text -->
+  <text x="100" y="210" text-anchor="middle" fill="#1e3a8a" style="font-family: 'Inter', 'Georgia', serif; font-weight: 600; font-size: 28px; letter-spacing: -0.02em;">liderplast</text>
+</svg>

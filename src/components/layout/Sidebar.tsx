@@ -28,6 +28,20 @@ const NAV_ITEMS = [
         ),
         adminOnly: false,
     },
+    {
+        label: 'Finanzas',
+        href: '/finance/expenses',
+        icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        ),
+        adminOnly: false,
+        subItems: [
+            { label: 'Ingresos', href: '/finance/income' },
+            { label: 'Egresos', href: '/finance/expenses' },
+        ]
+    }
 ];
 
 const ADMIN_ITEMS = [
@@ -55,45 +69,65 @@ export function Sidebar({ isAdmin }: SidebarProps) {
     const pathname = usePathname();
 
     return (
-        <aside className="w-64 bg-white border-r border-gray-200 flex flex-col h-full">
+        <aside className="w-64 bg-gradient-to-b from-sidebar-900 to-sidebar-800 flex flex-col h-full shadow-xl">
             {/* Logo */}
-            <div className="h-16 flex items-center px-6 border-b border-gray-200">
-                <Link href="/orders" className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+            <div className="h-16 flex items-center px-6 border-b border-white/10">
+                <Link href="/orders" className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
                         <span className="text-white font-bold text-sm">LP</span>
                     </div>
-                    <span className="text-lg font-semibold text-gray-900">Liderplast</span>
+                    <span className="text-xl font-bold text-white tracking-tight">Liderplast</span>
                 </Link>
             </div>
 
             {/* Nav */}
-            <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-                <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+            <nav className="flex-1 px-3 py-5 space-y-1 overflow-y-auto">
+                <p className="px-3 text-[11px] font-semibold text-sidebar-300 uppercase tracking-widest mb-3">
                     General
                 </p>
                 {NAV_ITEMS.map((item) => {
                     const isActive = pathname.startsWith(item.href);
                     return (
-                        <Link
-                            key={item.href}
-                            href={item.href}
-                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive
-                                ? 'bg-primary-50 text-primary-700'
-                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                                }`}
-                        >
-                            <span className={isActive ? 'text-primary-600' : 'text-gray-400'}>
-                                {item.icon}
-                            </span>
-                            {item.label}
-                        </Link>
+                        <div key={item.href} className="space-y-0.5">
+                            <Link
+                                href={item.href}
+                                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${isActive
+                                    ? 'bg-white/15 text-white shadow-sm shadow-black/10'
+                                    : 'text-sidebar-200 hover:text-white hover:bg-white/8'
+                                    }`}
+                            >
+                                <span className={`transition-colors ${isActive ? 'text-white' : 'text-sidebar-400'}`}>
+                                    {item.icon}
+                                </span>
+                                {item.label}
+                                {isActive && (
+                                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-sidebar-300 animate-pulse" />
+                                )}
+                            </Link>
+                            {item.subItems && (isActive || pathname.startsWith(item.href)) && (
+                                <div className="ml-9 space-y-0.5 border-l border-sidebar-600 pl-3">
+                                    {item.subItems.map(sub => (
+                                        <Link
+                                            key={sub.href}
+                                            href={sub.href}
+                                            className={`block py-1.5 text-xs font-medium transition-colors rounded-lg px-2 ${pathname === sub.href
+                                                ? 'text-white bg-white/8'
+                                                : 'text-sidebar-300 hover:text-white'
+                                                }`}
+                                        >
+                                            {sub.label}
+                                        </Link>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     );
                 })}
 
                 {isAdmin && (
                     <>
-                        <div className="pt-4 pb-2">
-                            <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        <div className="pt-5 pb-2">
+                            <p className="px-3 text-[11px] font-semibold text-sidebar-300 uppercase tracking-widest">
                                 Administración
                             </p>
                         </div>
@@ -103,15 +137,18 @@ export function Sidebar({ isAdmin }: SidebarProps) {
                                 <Link
                                     key={item.href}
                                     href={item.href}
-                                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive
-                                        ? 'bg-primary-50 text-primary-700'
-                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${isActive
+                                        ? 'bg-white/15 text-white shadow-sm shadow-black/10'
+                                        : 'text-sidebar-200 hover:text-white hover:bg-white/8'
                                         }`}
                                 >
-                                    <span className={isActive ? 'text-primary-600' : 'text-gray-400'}>
+                                    <span className={`transition-colors ${isActive ? 'text-white' : 'text-sidebar-400'}`}>
                                         {item.icon}
                                     </span>
                                     {item.label}
+                                    {isActive && (
+                                        <div className="ml-auto w-1.5 h-1.5 rounded-full bg-sidebar-300 animate-pulse" />
+                                    )}
                                 </Link>
                             );
                         })}
@@ -120,8 +157,8 @@ export function Sidebar({ isAdmin }: SidebarProps) {
             </nav>
 
             {/* Versión */}
-            <div className="p-4 border-t border-gray-200">
-                <p className="text-xs text-gray-400 text-center">v1.0.0 — MVP</p>
+            <div className="p-4 border-t border-white/10">
+                <p className="text-[11px] text-sidebar-400 text-center font-medium">v1.0.0 — Liderplast</p>
             </div>
         </aside>
     );

@@ -16,15 +16,6 @@ export const orderSchema = z.object({
     channel: z.enum(['INTERNO', 'REVENDEDOR']),
     seller_id: z.string().uuid().nullable().optional(),
     reseller_id: z.string().uuid().nullable().optional(),
-    status: z.enum([
-        'BORRADOR',
-        'CONFIRMADO',
-        'EN_PRODUCCION',
-        'PRODUCIDO',
-        'VIAJE_ASIGNADO',
-        'ENTREGADO',
-        'CANCELADO',
-    ]).default('BORRADOR'),
     discount_amount: z.coerce.number().min(0).default(0),
     freight_amount: z.coerce.number().min(0).default(0),
     installation_amount: z.coerce.number().min(0).default(0),
@@ -167,17 +158,44 @@ export const installerSchema = z.object({
 export type InstallerFormData = z.infer<typeof installerSchema>;
 
 // -----------------------------------------------
+// Drivers (Fleteros)
+// -----------------------------------------------
+
+export const driverSchema = z.object({
+    name: z.string().min(1, 'El nombre es obligatorio'),
+    phone: z.string().optional().default(''),
+    is_active: z.boolean().default(true),
+});
+
+export type DriverFormData = z.infer<typeof driverSchema>;
+
+// -----------------------------------------------
+// Vehicles
+// -----------------------------------------------
+
+export const vehicleSchema = z.object({
+    name: z.string().min(1, 'El nombre es obligatorio'),
+    capacity: z.coerce.number().int().min(1, 'La capacidad debe ser al menos 1'),
+    is_active: z.boolean().default(true),
+});
+
+export type VehicleFormData = z.infer<typeof vehicleSchema>;
+
+// -----------------------------------------------
 // Trips
 // -----------------------------------------------
 
 export const tripSchema = z.object({
-    truck_type_id: z.string().uuid('Seleccione un tipo de camión').nullable().optional(),
+    province_id: z.string().uuid('Seleccione una provincia'),
+    exact_address: z.string().min(1, 'La dirección exacta es obligatoria'),
+    trip_date: z.string().min(1, 'La fecha es obligatoria'),
+    driver_id: z.string().uuid('Seleccione un fletero'),
+    vehicle_id: z.string().uuid('Seleccione un vehículo'),
     cost: z.coerce.number().min(0, 'El costo no puede ser negativo').default(0),
     description: z.string().optional().default(''),
-    destination: z.string().min(1, 'El destino es obligatorio'),
-    date: z.string().optional().nullable(),
-    status: z.string().default('PENDIENTE'),
+    status: z.enum(['PLANIFICADO', 'EN_RUTA', 'ENTREGADO', 'CANCELADO']).default('PLANIFICADO'),
     notes: z.string().optional().default(''),
+    order_ids: z.array(z.string().uuid()).min(1, 'Debe asignar al menos un pedido').optional(),
 });
 
 export type TripFormData = z.infer<typeof tripSchema>;

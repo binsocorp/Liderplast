@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode } from 'react';
+import { Input, Select } from './FormInputs';
 
 // -----------------------------------------------
 // Filter Chip
@@ -18,8 +19,8 @@ function FilterChip({ label, active = true, onRemove, onClick }: FilterChipProps
         <button
             onClick={onClick || onRemove}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${active
-                    ? 'bg-primary-50 text-primary-700 border border-primary-200'
-                    : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                ? 'bg-primary-50 text-primary-700 border border-primary-200'
+                : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
                 }`}
         >
             {label}
@@ -64,12 +65,13 @@ export function FilterBar({
                     >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
-                    <input
+                    <Input
                         type="text"
                         value={searchValue}
                         onChange={(e) => onSearchChange(e.target.value)}
                         placeholder={searchPlaceholder}
-                        className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none w-64 transition-colors"
+                        className="pl-9 w-64"
+                        uiSize="sm"
                     />
                 </div>
             )}
@@ -97,19 +99,15 @@ export function SelectFilter({
     allLabel = 'Todos',
 }: SelectFilterProps) {
     return (
-        <select
+        <Select
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-colors"
+            options={options}
+            placeholder={allLabel}
+            uiSize="sm"
             aria-label={label}
-        >
-            <option value="">{allLabel}</option>
-            {options.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                </option>
-            ))}
-        </select>
+            className="w-auto min-w-[120px]"
+        />
     );
 }
 

@@ -74,14 +74,7 @@ export default function DashboardClient({ orders }: DashboardClientProps) {
         ];
     }, [orders]);
 
-    // 5. Orders by Status
-    const statusData = useMemo(() => {
-        const data: Record<string, number> = {};
-        orders.forEach(o => {
-            data[o.status] = (data[o.status] || 0) + 1;
-        });
-        return Object.entries(data).map(([name, count]) => ({ name: name.replace(/_/g, ' '), count }));
-    }, [orders]);
+    // statusData removed
 
     return (
         <>
@@ -159,21 +152,7 @@ export default function DashboardClient({ orders }: DashboardClientProps) {
                         </div>
                     </div>
 
-                    {/* Status Bar Chart */}
-                    <div className="bg-white p-6 rounded-xl border border-gray-200 md:col-span-2">
-                        <h3 className="text-base font-semibold text-gray-900 mb-6">Pedidos por Estado</h3>
-                        <div className="h-64">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={statusData}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                                    <YAxis tick={{ fontSize: 12 }} />
-                                    <RechartsTooltip />
-                                    <Bar dataKey="count" fill="#7c3aed" radius={[4, 4, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
+                    {/* Status Bar Chart Removed */}
                 </FormGrid>
             </div>
         </>

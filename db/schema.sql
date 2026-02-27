@@ -174,9 +174,20 @@ CREATE TABLE public.installers (
 );
 
 -- -----------------------------------------------
--- 11) TRUCK TYPES (Fletes)
+-- 11) DRIVERS (Fleteros)
 -- -----------------------------------------------
-CREATE TABLE public.truck_types (
+CREATE TABLE public.drivers (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name        TEXT NOT NULL,
+  phone       TEXT DEFAULT '',
+  is_active   BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- -----------------------------------------------
+-- 11) VEHICLES (Tipos de Vehículo)
+-- -----------------------------------------------
+CREATE TABLE public.vehicles (
   id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name        TEXT NOT NULL UNIQUE,
   capacity    INTEGER NOT NULL DEFAULT 1 CHECK (capacity >= 1),
@@ -190,16 +201,32 @@ CREATE TABLE public.truck_types (
 CREATE TABLE public.trips (
   id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   trip_code       TEXT UNIQUE,
-  truck_type_id   UUID REFERENCES public.truck_types(id),
+  province_id     UUID NOT NULL REFERENCES public.provinces(id),
+  exact_address   TEXT NOT NULL,
+  trip_date       DATE NOT NULL,
+  driver_id       UUID NOT NULL REFERENCES public.drivers(id),
+  vehicle_id      UUID NOT NULL REFERENCES public.vehicles(id),
   description     TEXT DEFAULT '',
-  destination     TEXT DEFAULT '',
-  date            DATE,
   cost            NUMERIC(12,2) NOT NULL DEFAULT 0,
-  status          TEXT NOT NULL DEFAULT 'PENDIENTE',
+  status          TEXT NOT NULL DEFAULT 'PLANIFICADO', -- PLANIFICADO, EN_RUTA, ENTREGADO, CANCELADO
   notes           TEXT DEFAULT '',
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- -----------------------------------------------
+-- 13) TRIP ORDERS (Relación Flete <-> Pedidos)
+-- -----------------------------------------------
+CREATE TABLE public.trip_orders (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  trip_id         UUID NOT NULL REFERENCES public.trips(id) ON DELETE CASCADE,
+  order_id        UUID NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(trip_id, order_id)
+);
+
+CREATE INDEX idx_trip_orders_trip ON public.trip_orders(trip_id);
+CREATE INDEX idx_trip_orders_order ON public.trip_orders(order_id);
 
 -- Auto-number trip_code
 CREATE SEQUENCE IF NOT EXISTS trip_code_seq START 1;

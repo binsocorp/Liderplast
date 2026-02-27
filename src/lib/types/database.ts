@@ -4,14 +4,8 @@
 
 export type UserRole = 'ADMIN' | 'USER';
 export type SalesChannel = 'INTERNO' | 'REVENDEDOR';
-export type OrderStatus =
-    | 'BORRADOR'
-    | 'CONFIRMADO'
-    | 'EN_PRODUCCION'
-    | 'PRODUCIDO'
-    | 'VIAJE_ASIGNADO'
-    | 'ENTREGADO'
-    | 'CANCELADO';
+// export type OrderStatus = ... (removed)
+export type PaymentStatus = 'PENDING' | 'PAID' | 'UNPAID' | 'REFUNDED';
 export type ItemType = 'PRODUCTO' | 'SERVICIO';
 export type SellerType = 'INTERNO' | 'REVENDEDOR';
 export type BillingCycle = 'MONTHLY' | 'YEARLY' | 'OTHER';
@@ -114,7 +108,15 @@ export interface Installer {
     created_at: string;
 }
 
-export interface TruckType {
+export interface Driver {
+    id: string;
+    name: string;
+    phone: string;
+    is_active: boolean;
+    created_at: string;
+}
+
+export interface Vehicle {
     id: string;
     name: string;
     capacity: number;
@@ -125,15 +127,24 @@ export interface TruckType {
 export interface Trip {
     id: string;
     trip_code: string;
-    truck_type_id: string | null;
+    province_id: string;
+    exact_address: string;
+    trip_date: string;
+    driver_id: string;
+    vehicle_id: string;
     cost: number;
     description: string;
-    destination: string;
-    date: string | null;
-    status: string;
+    status: 'PLANIFICADO' | 'EN_RUTA' | 'ENTREGADO' | 'CANCELADO';
     notes: string;
     created_at: string;
     updated_at: string;
+}
+
+export interface TripOrder {
+    id: string;
+    trip_id: string;
+    order_id: string;
+    created_at: string;
 }
 
 export interface Order {
@@ -150,7 +161,8 @@ export interface Order {
     channel: SalesChannel;
     seller_id: string | null;
     reseller_id: string | null;
-    status: OrderStatus;
+    // status: OrderStatus; (removed)
+    payment_status: PaymentStatus;
     subtotal_products: number;
     subtotal_services: number;
     discount_amount: number;
@@ -248,8 +260,10 @@ export interface Database {
             catalog_items: { Row: CatalogItem; Insert: Partial<CatalogItem>; Update: Partial<CatalogItem> };
             prices: { Row: Price; Insert: Partial<Price>; Update: Partial<Price> };
             installers: { Row: Installer; Insert: Partial<Installer>; Update: Partial<Installer> };
-            truck_types: { Row: TruckType; Insert: Partial<TruckType>; Update: Partial<TruckType> };
+            drivers: { Row: Driver; Insert: Partial<Driver>; Update: Partial<Driver> };
+            vehicles: { Row: Vehicle; Insert: Partial<Vehicle>; Update: Partial<Vehicle> };
             trips: { Row: Trip; Insert: Partial<Trip>; Update: Partial<Trip> };
+            trip_orders: { Row: TripOrder; Insert: Partial<TripOrder>; Update: Partial<TripOrder> };
             orders: { Row: Order; Insert: Partial<Order>; Update: Partial<Order> };
             order_items: { Row: OrderItem; Insert: Partial<OrderItem>; Update: Partial<OrderItem> };
             user_subscriptions: { Row: UserSubscription; Insert: Partial<UserSubscription>; Update: Partial<UserSubscription> };
@@ -258,7 +272,8 @@ export interface Database {
         Enums: {
             user_role: UserRole;
             sales_channel: SalesChannel;
-            order_status: OrderStatus;
+            // order_status: OrderStatus; (removed)
+            payment_status: PaymentStatus;
             item_type: ItemType;
             seller_type: SellerType;
             billing_cycle: BillingCycle;

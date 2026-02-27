@@ -25,10 +25,15 @@ interface FieldDef {
     placeholder?: string;
 }
 
+interface MasterColumn extends Column<Record<string, unknown>> {
+    renderType?: 'boolean' | 'currency' | 'badge';
+}
+
 interface MasterCrudProps {
     title: string;
-    entityTable: 'provinces' | 'clients' | 'sellers' | 'resellers' | 'suppliers' | 'catalog_items' | 'prices' | 'installers' | 'trips' | 'truck_types';
-    columns: Column<Record<string, unknown>>[];
+    entityTable: 'provinces' | 'clients' | 'sellers' | 'resellers' | 'suppliers' | 'catalog_items' | 'prices' | 'installers' | 'trips' | 'drivers' | 'vehicles' |
+    'finance_categories' | 'finance_subcategories' | 'finance_payment_methods' | 'finance_vendors' | 'finance_cost_centers';
+    columns: MasterColumn[];
     fields: FieldDef[];
     data: Record<string, unknown>[];
     backHref?: string;
@@ -92,9 +97,38 @@ export function MasterCrud({ title, entityTable, columns, fields, data, backHref
         }
     }
 
+    // Map columns to include declarative rendering
+    const mappedColumns: Column<Record<string, unknown>>[] = columns.map(col => {
+        if (col.renderType === 'boolean') {
+            return {
+                ...col,
+                render: (row: any) => (
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${row[col.key] ? 'bg-success-100 text-success-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {row[col.key] ? 'Activo' : 'Inactivo'}
+                    </span>
+                )
+            };
+        }
+        if (col.renderType === 'badge') {
+            return {
+                ...col,
+                render: (row: any) => (
+                    <Badge status={row[col.key] ? 'ACTIVE' : 'PAUSED'} />
+                )
+            };
+        }
+        if (col.renderType === 'currency') {
+            return {
+                ...col,
+                render: (row: any) => row[col.key] ? `$${Number(row[col.key]).toLocaleString('es-AR')}` : '-'
+            };
+        }
+        return col as Column<Record<string, unknown>>;
+    });
+
     // Add action column
     const allColumns: Column<Record<string, unknown>>[] = [
-        ...columns,
+        ...mappedColumns,
         {
             key: '_actions',
             label: '',

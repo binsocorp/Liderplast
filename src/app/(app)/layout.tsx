@@ -21,17 +21,17 @@ export default async function AppLayout({
         .eq('id', user.id)
         .single();
 
-    const isAdmin = profile?.role === 'ADMIN';
+    const isAdmin = (profile as any)?.role === 'ADMIN';
 
     return (
         <div className="flex h-screen overflow-hidden">
             <Sidebar isAdmin={isAdmin} />
             <div className="flex-1 flex flex-col overflow-hidden">
                 <Header
-                    userName={profile?.full_name || user.email || ''}
-                    userRole={profile?.role || 'USER'}
+                    userName={(profile as any)?.full_name || user.email || ''}
+                    userRole={(profile as any)?.role || 'USER'}
                 />
-                <main className="flex-1 overflow-y-auto p-6 bg-gray-50">
+                <main className="flex-1 overflow-y-auto p-6 bg-gray-100">
                     {children}
                 </main>
             </div>

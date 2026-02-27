@@ -4,14 +4,23 @@ import { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } fro
 // Input
 // -----------------------------------------------
 
+// -----------------------------------------------
+// Input
+// -----------------------------------------------
+
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
     error?: boolean;
+    uiSize?: 'default' | 'sm';
 }
 
-export function Input({ error, className = '', ...props }: InputProps) {
+export function Input({ error, uiSize = 'default', className = '', ...props }: InputProps) {
+    const padding = className.includes('p-') || className.includes('px-') || className.includes('py-')
+        ? ''
+        : (uiSize === 'sm' ? 'px-3 py-1' : 'px-4 py-2.5');
+
     return (
         <input
-            className={`w-full px-4 py-2.5 border rounded-lg text-sm outline-none transition-colors ${error
+            className={`w-full border rounded-lg text-sm outline-none transition-colors ${padding} ${error
                 ? 'border-danger-500 focus:ring-2 focus:ring-danger-500/20'
                 : 'border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500'
                 } ${className}`}
@@ -33,12 +42,17 @@ interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'chi
     options: SelectOption[];
     placeholder?: string;
     error?: boolean;
+    uiSize?: 'default' | 'sm';
 }
 
-export function Select({ options, placeholder, error, className = '', ...props }: SelectProps) {
+export function Select({ options, placeholder, error, uiSize = 'default', className = '', ...props }: SelectProps) {
+    const padding = className.includes('p-') || className.includes('px-') || className.includes('py-')
+        ? ''
+        : (uiSize === 'sm' ? 'px-3 py-1' : 'px-4 py-2.5');
+
     return (
         <select
-            className={`w-full px-4 py-2.5 border rounded-lg text-sm outline-none transition-colors bg-white text-ellipsis overflow-hidden whitespace-nowrap pr-8 ${error
+            className={`w-full border rounded-lg text-sm outline-none transition-colors bg-white text-ellipsis overflow-hidden whitespace-nowrap pr-8 ${padding} ${error
                 ? 'border-danger-500 focus:ring-2 focus:ring-danger-500/20'
                 : 'border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500'
                 } ${className}`}
@@ -62,12 +76,17 @@ export function Select({ options, placeholder, error, className = '', ...props }
 
 interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
     error?: boolean;
+    uiSize?: 'default' | 'sm';
 }
 
-export function Textarea({ error, className = '', ...props }: TextareaProps) {
+export function Textarea({ error, uiSize = 'default', className = '', ...props }: TextareaProps) {
+    const padding = className.includes('p-') || className.includes('px-') || className.includes('py-')
+        ? ''
+        : (uiSize === 'sm' ? 'px-3 py-1' : 'px-4 py-2.5');
+
     return (
         <textarea
-            className={`w-full px-4 py-2.5 border rounded-lg text-sm outline-none transition-colors resize-y min-h-[80px] ${error
+            className={`w-full border rounded-lg text-sm outline-none transition-colors resize-y min-h-[80px] ${padding} ${error
                 ? 'border-danger-500 focus:ring-2 focus:ring-danger-500/20'
                 : 'border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500'
                 } ${className}`}

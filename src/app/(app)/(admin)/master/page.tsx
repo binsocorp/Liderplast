@@ -10,8 +10,12 @@ const MASTER_SECTIONS = [
     { name: 'Catálogo', href: '/master/catalog', description: 'Productos y servicios', icon: '📦' },
     { name: 'Precios', href: '/master/prices', description: 'Matriz de precios por provincia', icon: '💰' },
     { name: 'Instaladores', href: '/master/installers', description: 'Equipos de instalación', icon: '🔧' },
-    { name: 'Tipos de Camión', href: '/master/truck-types', description: 'Tipos de camiones y capacidad', icon: '🚛' },
-    { name: 'Fletes', href: '/master/fletes', description: 'Gestión de tipos de camión y fletes', icon: '🚚' },
+    { name: 'Fleteros', href: '/master/drivers', description: 'Conductores de fletes', icon: '🧑‍✈️' },
+    { name: 'Vehículos', href: '/master/vehicles', description: 'Tipos de vehículos y capacidad', icon: '🚛' },
+    { name: 'Cat. Finanzas', href: '/master/finance-categories', description: 'Categorías de gastos e ingresos', icon: '📊' },
+    { name: 'Subcat. Finanzas', href: '/master/finance-subcategories', description: 'Desglose de categorías financieras', icon: '📉' },
+    { name: 'Medios de Pago', href: '/master/finance-payment-methods', description: 'Cajas y cuentas bancarias', icon: '💳' },
+    { name: 'Proveedores (F)', href: '/master/finance-vendors', description: 'Proveedores financieros', icon: '🏢' },
 ];
 
 export default function MasterDataPage() {

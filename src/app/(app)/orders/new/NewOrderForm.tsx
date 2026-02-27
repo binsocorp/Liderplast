@@ -129,62 +129,81 @@ export function NewOrderForm({
         setLoading(true);
         setError(null);
 
-        // 1. Crear el Pedido
-        const orderResult = await createOrder({
-            client_id: clientId || null,
-            client_name: clientName,
-            client_document: document,
-            client_phone: phone,
-            delivery_address: address,
-            city,
-            distance_km: Number(distance) || 0,
-            province_id: provinceId,
-            channel: 'INTERNO' as SalesChannel,
-            seller_id: sellerId || null,
-            status: 'BORRADOR',
-            discount_amount: Number(descuento) || 0,
-            freight_amount: Number(flete) || 0,
-            installation_amount: Number(instalacion) || 0,
-            travel_amount: Number(viaticos) || 0,
-            other_amount: Number(otro) || 0,
-            tax_amount_manual: Number(impuestos) || 0,
-            notes: '',
-        });
+        try {
+            console.log('Iniciando creación de pedido...');
 
-        if (orderResult.error || !orderResult.data) {
-            setError(orderResult.error || 'Error al crear pedido');
-            setLoading(false);
-            return;
-        }
+            // 1. Crear el Pedido
+            const orderResult = await createOrder({
+                client_id: clientId || null,
+                client_name: clientName,
+                client_document: document,
+                client_phone: phone,
+                delivery_address: address,
+                city,
+                distance_km: Number(distance) || 0,
+                province_id: provinceId,
+                channel: 'INTERNO' as SalesChannel,
+                seller_id: sellerId || null,
+                // status removed
+                discount_amount: Number(descuento) || 0,
+                freight_amount: Number(flete) || 0,
+                installation_amount: Number(instalacion) || 0,
+                travel_amount: Number(viaticos) || 0,
+                other_amount: Number(otro) || 0,
+                tax_amount_manual: Number(impuestos) || 0,
+                notes: '',
+            });
 
-        const orderId = orderResult.data.id;
-
-        // 2. Armar el array de Items
-        const bulkItems: any[] = [];
-        const pushItem = (id: string, desc: string, qty: number, price: number) => {
-            if (id && qty > 0) {
-                bulkItems.push({ catalog_item_id: id, description: desc, quantity: qty, unit_price_net: price, type: 'PRODUCTO' });
+            if (orderResult.error || !orderResult.data) {
+                console.error('Error en createOrder:', orderResult.error);
+                setError(orderResult.error || 'Error al crear pedido');
+                setLoading(false);
+                return;
             }
-        };
 
-        if (cascoId) pushItem(cascoId, `Casco ${catalogItems.find((c: any) => c.id === cascoId)?.name} (Color: ${color})`, 1, getPrice(cascoId));
-        if (casilla) pushItem(getItemId('Casilla'), 'Casilla', 1, getPrice(getItemId('Casilla')));
-        if (Number(losetasL) > 0) pushItem(getItemId('Loseta Atérmica L'), 'Loseta Atérmica L', Number(losetasL), getPrice(getItemId('Loseta Atérmica L')));
-        if (Number(losetasR) > 0) pushItem(getItemId('Loseta Atérmica R'), 'Loseta Atérmica R', Number(losetasR), getPrice(getItemId('Loseta Atérmica R')));
-        if (Number(pastina) > 0) pushItem(getItemId('Pastina (Kg)'), 'Pastina', Number(pastina), getPrice(getItemId('Pastina (Kg)')));
-        if (kitFiltrado) pushItem(getItemId('Kit Filtrado'), 'Kit Filtrado', 1, getPrice(getItemId('Kit Filtrado')));
-        if (accesoriosInst) pushItem(getItemId('Accesorios Instalación'), 'Accesorios Instalación', 1, getPrice(getItemId('Accesorios Instalación')));
-        if (luces) pushItem(getItemId('Luces'), 'Luces', 1, getPrice(getItemId('Luces')));
-        if (prevClima) pushItem(getItemId('Prev. Climatización'), 'Prev. Climatización', 1, getPrice(getItemId('Prev. Climatización')));
-        if (prevCascada) pushItem(getItemId('Prev. Cascada'), 'Prev. Cascada', 1, getPrice(getItemId('Prev. Cascada')));
-        if (cascada) pushItem(getItemId('Cascada'), 'Cascada', 1, getPrice(getItemId('Cascada')));
-        if (kitLimpieza) pushItem(getItemId('Kit Limpieza'), 'Kit Limpieza', 1, getPrice(getItemId('Kit Limpieza')));
+            const orderId = orderResult.data.id;
+            console.log('Pedido creado con ID:', orderId);
 
-        if (bulkItems.length > 0) {
-            await addOrderItemsBulk(orderId, bulkItems);
+            // 2. Armar el array de Items
+            const bulkItems: any[] = [];
+            const pushItem = (id: string, desc: string, qty: number, price: number) => {
+                if (id && qty > 0) {
+                    bulkItems.push({ catalog_item_id: id, description: desc, quantity: qty, unit_price_net: price, type: 'PRODUCTO' });
+                }
+            };
+
+            if (cascoId) pushItem(cascoId, `Casco ${catalogItems.find((c: any) => c.id === cascoId)?.name || 'Desconocido'} (Color: ${color})`, 1, getPrice(cascoId));
+            if (casilla) pushItem(getItemId('Casilla'), 'Casilla', 1, getPrice(getItemId('Casilla')));
+            if (Number(losetasL) > 0) pushItem(getItemId('Loseta Atérmica L'), 'Loseta Atérmica L', Number(losetasL), getPrice(getItemId('Loseta Atérmica L')));
+            if (Number(losetasR) > 0) pushItem(getItemId('Loseta Atérmica R'), 'Loseta Atérmica R', Number(losetasR), getPrice(getItemId('Loseta Atérmica R')));
+            if (Number(pastina) > 0) pushItem(getItemId('Pastina (Kg)'), 'Pastina', Number(pastina), getPrice(getItemId('Pastina (Kg)')));
+            if (kitFiltrado) pushItem(getItemId('Kit Filtrado'), 'Kit Filtrado', 1, getPrice(getItemId('Kit Filtrado')));
+            if (accesoriosInst) pushItem(getItemId('Accesorios Instalación'), 'Accesorios Instalación', 1, getPrice(getItemId('Accesorios Instalación')));
+            if (luces) pushItem(getItemId('Luces'), 'Luces', 1, getPrice(getItemId('Luces')));
+            if (prevClima) pushItem(getItemId('Prev. Climatización'), 'Prev. Climatización', 1, getPrice(getItemId('Prev. Climatización')));
+            if (prevCascada) pushItem(getItemId('Prev. Cascada'), 'Prev. Cascada', 1, getPrice(getItemId('Prev. Cascada')));
+            if (cascada) pushItem(getItemId('Cascada'), 'Cascada', 1, getPrice(getItemId('Cascada')));
+            if (kitLimpieza) pushItem(getItemId('Kit Limpieza'), 'Kit Limpieza', 1, getPrice(getItemId('Kit Limpieza')));
+
+            if (bulkItems.length > 0) {
+                console.log('Insertando items bulk:', bulkItems.length);
+                const itemsResult = await addOrderItemsBulk(orderId, bulkItems);
+                if (itemsResult?.error) {
+                    console.error('Error insertando items:', itemsResult.error);
+                    setError('Pedido creado con éxito, pero hubo un error con los items: ' + itemsResult.error);
+                    setLoading(false);
+                    // No redireccionamos si hubo error en items para que el usuario vea el mensaje
+                    return;
+                }
+            }
+
+            console.log('Todo exitoso, redireccionando...');
+            router.push(`/orders/${orderId}`);
+        } catch (err: any) {
+            console.error('Error fatal en handleSubmit:', err);
+            setError('Error inesperado: ' + (err.message || String(err)));
+            setLoading(false);
         }
-
-        router.push(`/orders/${orderId}`);
     }
 
     return (
@@ -205,45 +224,43 @@ export function NewOrderForm({
                 </div>
 
                 {/* FIELDS GRID */}
-                <div className="grid grid-cols-2 gap-x-0 bg-gray-50/50">
-                    <div className="p-3 border-r border-b border-gray-300 grid grid-cols-[100px_1fr] gap-2 items-center">
-                        <label className="text-gray-600 font-medium">Vendedor</label>
-                        <Select value={sellerId} onChange={e => setSellerId(e.target.value)} options={(sellers || []).map((s: any) => ({ value: s.id, label: s.name }))} className="h-8 text-sm" />
-                    </div>
-                    <div className="p-3 border-b border-gray-300 grid grid-cols-[100px_1fr] gap-2 items-center bg-yellow-50/30">
-                        <label className="text-gray-600 font-medium">Provincia</label>
-                        <Select value={provinceId} onChange={e => setProvinceId(e.target.value)} options={(provinces || []).map((p: any) => ({ value: p.id, label: p.name }))} required className="h-8 text-sm" />
-                    </div>
+                <div className="p-3 border-r border-b border-gray-300 grid grid-cols-[100px_1fr] gap-2 items-center">
+                    <label className="text-gray-600 font-medium">Vendedor</label>
+                    <Select value={sellerId} onChange={e => setSellerId(e.target.value)} options={(sellers || []).map((s: any) => ({ value: s.id, label: s.name }))} uiSize="sm" className="h-9" />
+                </div>
+                <div className="p-3 border-b border-gray-300 grid grid-cols-[100px_1fr] gap-2 items-center bg-yellow-50/30">
+                    <label className="text-gray-600 font-medium">Provincia</label>
+                    <Select value={provinceId} onChange={e => setProvinceId(e.target.value)} options={(provinces || []).map((p: any) => ({ value: p.id, label: p.name }))} required uiSize="sm" className="h-9" />
+                </div>
 
-                    <div className="p-3 border-r border-b border-gray-300 grid grid-cols-[100px_1fr] gap-2 items-center">
-                        <label className="text-gray-600 font-medium">Cliente</label>
-                        <div className="flex gap-1">
-                            <Select value={clientId} onChange={e => handleClientChange(e.target.value)} options={(clients || []).map((c: any) => ({ value: c.id, label: c.name }))} className="h-8 text-sm w-1/3" placeholder="Buscar..." />
-                            <Input value={clientName} onChange={e => setClientName(e.target.value)} required className="h-8 text-sm w-2/3" placeholder="Nombre completo" />
-                        </div>
+                <div className="p-3 border-r border-b border-gray-300 grid grid-cols-[100px_1fr] gap-2 items-center">
+                    <label className="text-gray-600 font-medium">Cliente</label>
+                    <div className="flex gap-1">
+                        <Select value={clientId} onChange={e => handleClientChange(e.target.value)} options={(clients || []).map((c: any) => ({ value: c.id, label: c.name }))} uiSize="sm" className="h-9 w-1/3" placeholder="Buscar..." />
+                        <Input value={clientName} onChange={e => setClientName(e.target.value)} required uiSize="sm" className="h-9 w-2/3" placeholder="Nombre completo" />
                     </div>
-                    <div className="p-3 border-b border-gray-300 grid grid-cols-[100px_1fr] gap-2 items-center bg-yellow-50/30">
-                        <label className="text-gray-600 font-medium">Localidad</label>
-                        <Input value={city} onChange={e => setCity(e.target.value)} required className="h-8 text-sm" />
-                    </div>
+                </div>
+                <div className="p-3 border-b border-gray-300 grid grid-cols-[100px_1fr] gap-2 items-center bg-yellow-50/30">
+                    <label className="text-gray-600 font-medium">Localidad</label>
+                    <Input value={city} onChange={e => setCity(e.target.value)} required uiSize="sm" className="h-9" />
+                </div>
 
-                    <div className="p-3 border-r border-b border-gray-300 grid grid-cols-[100px_1fr] gap-2 items-center">
-                        <label className="text-gray-600 font-medium">DNI</label>
-                        <Input value={document} onChange={e => setDocument(e.target.value)} className="h-8 text-sm" />
-                    </div>
-                    <div className="p-3 border-b border-gray-300 grid grid-cols-[100px_1fr] gap-2 items-center bg-yellow-50/30">
-                        <label className="text-gray-600 font-medium whitespace-nowrap">Dir. Entrega</label>
-                        <Input value={address} onChange={e => setAddress(e.target.value)} required className="h-8 text-sm" />
-                    </div>
+                <div className="p-3 border-r border-b border-gray-300 grid grid-cols-[100px_1fr] gap-2 items-center">
+                    <label className="text-gray-600 font-medium">DNI</label>
+                    <Input value={document} onChange={e => setDocument(e.target.value)} uiSize="sm" className="h-9" />
+                </div>
+                <div className="p-3 border-b border-gray-300 grid grid-cols-[100px_1fr] gap-2 items-center bg-yellow-50/30">
+                    <label className="text-gray-600 font-medium whitespace-nowrap">Dir. Entrega</label>
+                    <Input value={address} onChange={e => setAddress(e.target.value)} required uiSize="sm" className="h-9" />
+                </div>
 
-                    <div className="p-3 border-r border-b border-gray-300 grid grid-cols-[100px_1fr] gap-2 items-center">
-                        <label className="text-gray-600 font-medium">Teléfono</label>
-                        <Input value={phone} onChange={e => setPhone(e.target.value)} className="h-8 text-sm" />
-                    </div>
-                    <div className="p-3 border-b border-gray-300 grid grid-cols-[100px_1fr] gap-2 items-center bg-yellow-50/30">
-                        <label className="text-gray-600 font-medium">Distancia (Km)</label>
-                        <Input type="number" value={distance} onChange={e => setDistance(e.target.value)} className="h-8 text-sm" />
-                    </div>
+                <div className="p-3 border-r border-b border-gray-300 grid grid-cols-[100px_1fr] gap-2 items-center">
+                    <label className="text-gray-600 font-medium">Teléfono</label>
+                    <Input value={phone} onChange={e => setPhone(e.target.value)} uiSize="sm" className="h-9" />
+                </div>
+                <div className="p-3 border-b border-gray-300 grid grid-cols-[100px_1fr] gap-2 items-center bg-yellow-50/30">
+                    <label className="text-gray-600 font-medium">Distancia (Km)</label>
+                    <Input type="number" value={distance} onChange={e => setDistance(e.target.value)} uiSize="sm" className="h-9" />
                 </div>
 
                 {/* SECTION: PRODUCT TITLE */}
@@ -262,7 +279,7 @@ export function NewOrderForm({
                     <div className="grid grid-cols-[1fr_120px_150px] items-center">
                         <div className="py-1.5 px-3 border-r border-gray-200 font-medium">Casco</div>
                         <div className="py-1.5 px-3 border-r border-gray-200 flex justify-center">
-                            <Select value={cascoId} onChange={e => setCascoId(e.target.value)} options={cascos.map((c: any) => ({ value: c.id, label: c.name }))} className="h-7 text-xs w-full" />
+                            <Select value={cascoId} onChange={e => setCascoId(e.target.value)} options={cascos.map((c: any) => ({ value: c.id, label: c.name }))} uiSize="sm" className="h-8 w-full" />
                         </div>
                         <div className="py-1.5 px-3 text-right font-medium">{formatCurrency(cascoId ? getPrice(cascoId) : 0)}</div>
                     </div>
@@ -270,7 +287,7 @@ export function NewOrderForm({
                     <div className="grid grid-cols-[1fr_120px_150px] items-center">
                         <div className="py-1.5 px-3 border-r border-gray-200 font-medium">Color</div>
                         <div className="py-1.5 px-3 border-r border-gray-200 flex justify-center">
-                            <Select value={color} onChange={e => setColor(e.target.value)} options={['Celeste', 'Blanco', 'Arena'].map(c => ({ value: c, label: c }))} className="h-7 text-xs w-full" />
+                            <Select value={color} onChange={e => setColor(e.target.value)} options={['Celeste', 'Blanco', 'Arena'].map(c => ({ value: c, label: c }))} uiSize="sm" className="h-8 w-full" />
                         </div>
                         <div className="py-1.5 px-3 text-right"></div>
                     </div>
@@ -280,7 +297,7 @@ export function NewOrderForm({
                     <div className="grid grid-cols-[1fr_120px_150px] items-center hover:bg-gray-50">
                         <div className="py-1.5 px-3 border-r border-gray-200 font-medium">Losetas L</div>
                         <div className="py-1.5 px-3 border-r border-gray-200 flex justify-center bg-yellow-50/30">
-                            <Input type="number" min="0" value={losetasL} onChange={e => setLosetasL(e.target.value)} className="h-7 text-xs w-16 text-center shadow-inner" />
+                            <Input type="number" min="0" value={losetasL} onChange={e => setLosetasL(e.target.value)} uiSize="sm" className="h-8 w-16 text-center shadow-inner" />
                         </div>
                         <div className="py-1.5 px-3 text-right font-medium">{formatCurrency(Number(losetasL || 0) * getPrice(getItemId('Loseta Atérmica L')))}</div>
                     </div>
@@ -288,7 +305,7 @@ export function NewOrderForm({
                     <div className="grid grid-cols-[1fr_120px_150px] items-center hover:bg-gray-50">
                         <div className="py-1.5 px-3 border-r border-gray-200 font-medium">Losetas R</div>
                         <div className="py-1.5 px-3 border-r border-gray-200 flex justify-center bg-yellow-50/30">
-                            <Input type="number" min="0" value={losetasR} onChange={e => setLosetasR(e.target.value)} className="h-7 text-xs w-16 text-center shadow-inner" />
+                            <Input type="number" min="0" value={losetasR} onChange={e => setLosetasR(e.target.value)} uiSize="sm" className="h-8 w-16 text-center shadow-inner" />
                         </div>
                         <div className="py-1.5 px-3 text-right font-medium">{formatCurrency(Number(losetasR || 0) * getPrice(getItemId('Loseta Atérmica R')))}</div>
                     </div>
@@ -296,7 +313,7 @@ export function NewOrderForm({
                     <div className="grid grid-cols-[1fr_120px_150px] items-center hover:bg-gray-50">
                         <div className="py-1.5 px-3 border-r border-gray-200 font-medium">Pastina (Kg)</div>
                         <div className="py-1.5 px-3 border-r border-gray-200 flex justify-center bg-yellow-50/30">
-                            <Input type="number" min="0" value={pastina} onChange={e => setPastina(e.target.value)} className="h-7 text-xs w-16 text-center shadow-inner" />
+                            <Input type="number" min="0" value={pastina} onChange={e => setPastina(e.target.value)} uiSize="sm" className="h-8 w-16 text-center shadow-inner" />
                         </div>
                         <div className="py-1.5 px-3 text-right font-medium">{formatCurrency(Number(pastina || 0) * getPrice(getItemId('Pastina (Kg)')))}</div>
                     </div>
@@ -374,7 +391,8 @@ function InputRow({ label, value, onChange, highlight, className }: { label: str
                         min="0"
                         value={value}
                         onChange={e => onChange(e.target.value)}
-                        className={`h-7 text-xs text-right shadow-inner ${className || ''}`}
+                        uiSize="sm"
+                        className={`h-8 text-right shadow-inner ${className || ''}`}
                     />
                 </div>
             </div>

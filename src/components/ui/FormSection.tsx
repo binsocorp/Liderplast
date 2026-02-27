@@ -50,8 +50,9 @@ export function FormField({ label, error, required, children }: FormFieldProps) 
 // Form grid
 // -----------------------------------------------
 
-export function FormGrid({ children, cols = 2 }: { children: ReactNode; cols?: 2 | 3 | 4 }) {
+export function FormGrid({ children, cols = 2 }: { children: ReactNode; cols?: 1 | 2 | 3 | 4 }) {
     const colClass = {
+        1: 'grid-cols-1',
         2: 'grid-cols-1 md:grid-cols-2',
         3: 'grid-cols-1 md:grid-cols-3',
         4: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4',
