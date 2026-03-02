@@ -161,7 +161,7 @@ export interface Order {
     channel: SalesChannel;
     seller_id: string | null;
     reseller_id: string | null;
-    // status: OrderStatus; (removed)
+    status: 'PENDIENTE' | 'CONFIRMADO' | 'EN_VIAJE' | 'ESPERANDO_INSTALACION' | 'COMPLETADO';
     payment_status: PaymentStatus;
     subtotal_products: number;
     subtotal_services: number;

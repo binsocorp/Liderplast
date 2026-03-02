@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { DataTable, Column } from '@/components/ui/DataTable';
@@ -9,12 +9,18 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { FormField, FormGrid } from '@/components/ui/FormSection';
 import { Input, Textarea, Select } from '@/components/ui/FormInputs';
-import { createTrip } from './actions';
+import { createTrip, deleteTrip } from './actions';
 import type { Trip, Driver, Vehicle, Province, TripOrder } from '@/lib/types/database';
 
+interface ExtendedTrip extends Trip {
+    vehicle: { name: string; capacity: number } | null;
+    driver: { name: string } | null;
+    province: { name: string } | null;
+}
+
 interface FletesClientProps {
-    trips: (Trip & { vehicle: { name: string; capacity: number } | null; driver: { name: string } | null; province: { name: string } | null })[];
-    tripOrders: (TripOrder & { order: { id: string, order_number: string, client_name: string } })[];
+    trips: ExtendedTrip[];
+    tripOrders: (TripOrder & { order: { id: string, order_number: string, client_name: string, freight_amount?: number, order_items?: any[] } })[];
     drivers: Driver[];
     vehicles: Vehicle[];
     provinces: Province[];
@@ -24,6 +30,10 @@ interface FletesClientProps {
 export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, availableOrders }: FletesClientProps) {
     const router = useRouter();
     const [showModal, setShowModal] = useState(false);
+    const [selectedMonth, setSelectedMonth] = useState(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    });
 
     // Form State
     const [provinceId, setProvinceId] = useState('');
@@ -31,7 +41,8 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
     const [tripDate, setTripDate] = useState('');
     const [driverId, setDriverId] = useState('');
     const [vehicleId, setVehicleId] = useState('');
-    const [cost, setCost] = useState(0);
+    const [cost, setCost] = useState(0); // Costo Presupuestado
+    const [actualCost, setActualCost] = useState(0);
     const [description, setDescription] = useState('');
     const [notes, setNotes] = useState('');
     const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
@@ -43,19 +54,45 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
 
     const selectedVehicle = useMemo(() => vehicles.find(v => v.id === vehicleId), [vehicleId, vehicles]);
 
-    // Filtered available orders by province (if selected) and search
+    // Statistics and filtering
+    const filteredTrips = useMemo(() => {
+        return trips.filter(t => t.trip_date?.startsWith(selectedMonth));
+    }, [trips, selectedMonth]);
+
+    const stats = useMemo(() => {
+        const totalTrips = filteredTrips.length;
+        const totalBudgeted = filteredTrips.reduce((acc, t) => acc + (Number(t.cost) || 0), 0);
+        const totalActual = filteredTrips.reduce((acc, t) => acc + (Number((t as any).actual_cost) || 0), 0);
+        return {
+            totalTrips,
+            totalBudgeted,
+            totalActual,
+            profit: totalBudgeted - totalActual
+        };
+    }, [filteredTrips]);
+
+    // Filtered available orders by search (removing province filter as requested)
     const filteredAvailable = useMemo(() => {
         return availableOrders.filter(o => {
-            const matchProvince = provinceId ? o.province_id === provinceId : true;
             const matchSearch = (o.order_number?.toLowerCase() || '').includes(orderSearch.toLowerCase()) ||
                 (o.client_name?.toLowerCase() || '').includes(orderSearch.toLowerCase());
-            return matchProvince && matchSearch && !selectedOrderIds.includes(o.id);
+            return matchSearch && !selectedOrderIds.includes(o.id);
         });
-    }, [availableOrders, provinceId, orderSearch, selectedOrderIds]);
+    }, [availableOrders, orderSearch, selectedOrderIds]);
 
     const selectedOrders = useMemo(() => {
         return availableOrders.filter(o => selectedOrderIds.includes(o.id));
     }, [availableOrders, selectedOrderIds]);
+
+    // Auto-calculate budgeted cost
+    const totalBudgetedCost = useMemo(() => {
+        return selectedOrders.reduce((acc, o) => acc + (Number(o.freight_amount) || 0), 0);
+    }, [selectedOrders]);
+
+    // Sync calculated cost to state when selections change
+    useEffect(() => {
+        setCost(totalBudgetedCost);
+    }, [totalBudgetedCost]);
 
     async function handleCreate() {
         setError(null);
@@ -68,6 +105,7 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
                 driver_id: driverId,
                 vehicle_id: vehicleId,
                 cost,
+                actual_cost: actualCost,
                 description,
                 notes,
                 status: 'PLANIFICADO',
@@ -96,10 +134,24 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
         setDriverId('');
         setVehicleId('');
         setCost(0);
+        setActualCost(0);
         setDescription('');
         setNotes('');
         setSelectedOrderIds([]);
         setOrderSearch('');
+    }
+
+    async function handleDelete(id: string) {
+        if (!confirm('¿Está seguro de que desea eliminar este flete? Los pedidos asociados volverán a estar disponibles.')) return;
+        setLoading(true);
+        try {
+            await deleteTrip(id);
+            router.refresh();
+        } catch (err: any) {
+            alert(err.message || 'Error al eliminar el flete');
+        } finally {
+            setLoading(false);
+        }
     }
 
     function toggleOrder(orderId: string) {
@@ -161,28 +213,76 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
             key: '_actions',
             label: '',
             render: (row) => (
-                <Button size="sm" variant="secondary" onClick={() => router.push(`/fletes/${row.id}`)}>
-                    Ver/Editar Projecto
-                </Button>
+                <div className="flex gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => router.push(`/fletes/${row.id}`)}>
+                        Ver/Editar Projecto
+                    </Button>
+                    <Button size="sm" variant="danger" onClick={() => handleDelete(row.id)}>
+                        Eliminar
+                    </Button>
+                </div>
             ),
         },
     ];
 
+    const formatExtra = (order: any) => {
+        const item = order.order_items?.[0];
+        if (!item) return null;
+        const colorMatch = item.description?.match(/\(Color:\s*(.*?)\)/);
+        const model = item.description?.split(' ')[0] || '';
+        const color = colorMatch ? colorMatch[1] : '';
+        return { model, color };
+    };
+
     return (
         <>
             <PageHeader
-                title="Fletes"
-                subtitle={`${trips.length} flete${trips.length !== 1 ? 's' : ''}`}
+                title="Gestión de Fletes"
+                subtitle={`${trips.length} fletes registrados`}
                 actions={
-                    <Button onClick={() => setShowModal(true)}>+ Nuevo Flete</Button>
+                    <div className="flex gap-4">
+                        <Input
+                            type="month"
+                            value={selectedMonth}
+                            onChange={(e) => setSelectedMonth(e.target.value)}
+                            className="bg-white border-gray-200"
+                        />
+                        <Button onClick={() => setShowModal(true)}>+ Nuevo Flete</Button>
+                    </div>
                 }
             />
 
+            {/* Statistics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Viajes del Mes</p>
+                    <p className="text-2xl font-black text-indigo-950">{stats.totalTrips}</p>
+                    <p className="text-[10px] text-gray-500 font-bold mt-1 uppercase italic opacity-50">Según fecha de viaje</p>
+                </div>
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Costo Presupuestado</p>
+                    <p className="text-2xl font-black text-amber-600">${stats.totalBudgeted.toLocaleString('es-AR')}</p>
+                    <p className="text-[10px] text-amber-500 font-bold mt-1 uppercase italic opacity-50">Suma de costos teóricos</p>
+                </div>
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Costo Real Pagado</p>
+                    <p className="text-2xl font-black text-primary-600">${stats.totalActual.toLocaleString('es-AR')}</p>
+                    <p className="text-[10px] text-primary-500 font-bold mt-1 uppercase italic opacity-50">Monto total abonado</p>
+                </div>
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Ganancia por Flete</p>
+                    <p className={`text-2xl font-black ${stats.profit >= 0 ? 'text-green-600' : 'text-danger-600'}`}>
+                        ${stats.profit.toLocaleString('es-AR')}
+                    </p>
+                    <p className="text-[10px] text-gray-500 font-bold mt-1 uppercase italic opacity-50">Diferencia Presup./Real</p>
+                </div>
+            </div>
+
             <DataTable
                 columns={columns}
-                data={trips}
+                data={filteredTrips}
                 keyExtractor={(row) => row.id}
-                emptyMessage="No hay fletes registrados"
+                emptyMessage="No hay fletes registrados para este periodo"
             />
 
             <Modal
@@ -250,13 +350,16 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
                                     </div>
                                 )}
                                 <div className="grid grid-cols-2 gap-4">
-                                    <FormField label="Costo ($)">
-                                        <Input type="number" value={cost} onChange={(e) => setCost(Number(e.target.value))} min={0} />
+                                    <FormField label="Costo Presup. ($)">
+                                        <Input type="number" value={cost} onChange={(e) => setCost(Number(e.target.value))} min={0} className="bg-gray-50 font-bold text-primary-700" title="Calculado automáticamente por los pedidos seleccionados" />
                                     </FormField>
-                                    <FormField label="Descripción">
-                                        <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Ej: Viaje extra" />
+                                    <FormField label="Costo Real ($)">
+                                        <Input type="number" value={actualCost} onChange={(e) => setActualCost(Number(e.target.value))} min={0} />
                                     </FormField>
                                 </div>
+                                <FormField label="Descripción">
+                                    <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Ej: Viaje extra" />
+                                </FormField>
                                 <FormField label="Notas">
                                     <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Comentarios adicionales..." />
                                 </FormField>
@@ -293,20 +396,33 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
                                         <p className="text-xs text-center py-4 text-gray-400 italic">No se encontraron pedidos disponibles</p>
                                     ) : (
                                         <div className="space-y-1">
-                                            {filteredAvailable.map(order => (
-                                                <div
-                                                    key={order.id}
-                                                    onClick={() => toggleOrder(order.id)}
-                                                    className="flex items-center justify-between p-2 rounded border bg-white hover:border-primary-300 cursor-pointer text-xs"
-                                                >
-                                                    <div>
-                                                        <span className="font-bold text-primary-700">#{order.order_number}</span>
-                                                        <span className="mx-2 text-gray-300">|</span>
-                                                        <span className="text-gray-600 truncate">{order.client_name}</span>
+                                            {filteredAvailable.map(order => {
+                                                const extra = formatExtra(order);
+                                                return (
+                                                    <div
+                                                        key={order.id}
+                                                        onClick={() => toggleOrder(order.id)}
+                                                        className="flex items-center justify-between p-2 rounded border bg-white hover:border-primary-300 cursor-pointer text-xs"
+                                                    >
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-bold text-primary-700">#{order.order_number}</span>
+                                                                <span className="text-[10px] bg-gray-100 px-1 text-gray-500 rounded font-bold uppercase">{order.province?.name}</span>
+                                                            </div>
+                                                            <p className="text-gray-600 truncate">{order.client_name}</p>
+                                                            {extra && (
+                                                                <p className="text-[10px] text-primary-600 font-bold mt-0.5 italic">
+                                                                    CASCO: {extra.model} {extra.color && `- ${extra.color}`}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="font-bold text-gray-900">${(order.freight_amount || 0).toLocaleString('es-AR')}</p>
+                                                            <p className="text-[9px] text-gray-400 font-bold uppercase italic">Flete Pedido</p>
+                                                        </div>
                                                     </div>
-                                                    <span className="text-[10px] bg-gray-100 px-1 text-gray-500 rounded">{order.province?.name}</span>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </div>

@@ -21,17 +21,20 @@ export default async function OrdersPage() {
     const provinceIds = [...new Set(ordersData.map(o => o.province_id).filter(Boolean))];
     const tripIds = [...new Set(ordersData.map(o => o.trip_id).filter(Boolean))];
     const installerIds = [...new Set(ordersData.map(o => o.installer_id).filter(Boolean))];
+    const resellerIds = [...new Set(ordersData.map(o => o.reseller_id).filter(Boolean))];
 
     const [
         { data: sellers },
         { data: provinces },
         { data: trips },
-        { data: installers }
+        { data: installers },
+        { data: resellers }
     ] = await Promise.all([
         supabase.from('sellers').select('id, name').in('id', sellerIds),
         supabase.from('provinces').select('id, name').in('id', provinceIds),
         supabase.from('trips').select('id, trip_code, driver:drivers(name)').in('id', tripIds),
-        supabase.from('installers').select('id, name').in('id', installerIds)
+        supabase.from('installers').select('id, name').in('id', installerIds),
+        supabase.from('resellers').select('id, name').in('id', resellerIds)
     ]);
 
     // 3. Enrich orders
@@ -40,6 +43,7 @@ export default async function OrdersPage() {
         const province = provinces?.find(p => p.id === order.province_id) || null;
         const trip: any = trips?.find(t => t.id === order.trip_id) || null;
         const installer = installers?.find(i => i.id === order.installer_id) || null;
+        const reseller = resellers?.find(r => r.id === order.reseller_id) || null;
 
         return {
             ...order,
@@ -47,6 +51,7 @@ export default async function OrdersPage() {
             province,
             trip,
             installer,
+            reseller,
             _driver_name: trip?.driver?.name || '',
             _trip_code: trip?.trip_code || ''
         };
@@ -57,23 +62,26 @@ export default async function OrdersPage() {
         allSellers,
         allProvinces,
         allInstallers,
-        allTrips
+        allTrips,
+        allResellers
     ] = await Promise.all([
         supabase.from('sellers').select('id, name').eq('is_active', true).order('name').then(r => r.data ?? []),
         supabase.from('provinces').select('id, name').eq('is_sellable', true).order('name').then(r => r.data ?? []),
         supabase.from('installers').select('id, name').eq('is_active', true).order('name').then(r => r.data ?? []),
         supabase.from('trips').select('id, trip_code').order('created_at', { ascending: false }).limit(20).then(r => r.data ?? []),
+        supabase.from('resellers').select('id, name').eq('is_active', true).order('name').then(r => r.data ?? []),
     ]);
 
     return (
         <div className="p-1">
             <OrdersClient
-                orders={enrichedOrders}
+                orders={enrichedOrders as any}
                 lookups={{
                     sellers: allSellers,
                     provinces: allProvinces,
                     installers: allInstallers,
-                    trips: allTrips
+                    trips: allTrips,
+                    resellers: allResellers,
                 }}
             />
         </div>

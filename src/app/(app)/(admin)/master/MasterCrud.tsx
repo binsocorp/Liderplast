@@ -18,10 +18,10 @@ import { createEntity, updateEntity, deleteEntity } from './actions';
 interface FieldDef {
     key: string;
     label: string;
-    type: 'text' | 'email' | 'select' | 'checkbox' | 'textarea' | 'number';
+    type: 'text' | 'email' | 'select' | 'multiselect' | 'checkbox' | 'textarea' | 'number';
     required?: boolean;
     options?: { value: string; label: string }[];
-    defaultValue?: string | boolean | number;
+    defaultValue?: string | boolean | number | string[];
     placeholder?: string;
 }
 
@@ -32,7 +32,7 @@ interface MasterColumn extends Column<Record<string, unknown>> {
 interface MasterCrudProps {
     title: string;
     entityTable: 'provinces' | 'clients' | 'sellers' | 'resellers' | 'suppliers' | 'catalog_items' | 'prices' | 'installers' | 'trips' | 'drivers' | 'vehicles' |
-    'finance_categories' | 'finance_subcategories' | 'finance_payment_methods' | 'finance_vendors' | 'finance_cost_centers';
+    'finance_categories' | 'finance_subcategories' | 'finance_payment_methods' | 'finance_vendors' | 'finance_cost_centers' | 'reseller_price_lists' | 'reseller_prices';
     columns: MasterColumn[];
     fields: FieldDef[];
     data: Record<string, unknown>[];
@@ -51,7 +51,7 @@ export function MasterCrud({ title, entityTable, columns, fields, data, backHref
         setEditingId(null);
         const defaults: Record<string, unknown> = {};
         fields.forEach(f => {
-            defaults[f.key] = f.defaultValue ?? (f.type === 'checkbox' ? true : '');
+            defaults[f.key] = f.defaultValue ?? (f.type === 'checkbox' ? true : f.type === 'multiselect' ? [] : '');
         });
         setFormData(defaults);
         setShowModal(true);
@@ -61,7 +61,7 @@ export function MasterCrud({ title, entityTable, columns, fields, data, backHref
         setEditingId(row.id as string);
         const values: Record<string, unknown> = {};
         fields.forEach(f => {
-            values[f.key] = row[f.key] ?? f.defaultValue ?? '';
+            values[f.key] = row[f.key] ?? f.defaultValue ?? (f.type === 'multiselect' ? [] : '');
         });
         setFormData(values);
         setShowModal(true);
@@ -221,6 +221,26 @@ export function MasterCrud({ title, entityTable, columns, fields, data, backHref
                                         onChange={(e) => updateField(field.key, e.target.value)}
                                         placeholder={field.placeholder}
                                     />
+                                ) : field.type === 'multiselect' && field.options ? (
+                                    <div className="space-y-2 border border-gray-200 rounded-lg p-3 max-h-48 overflow-y-auto">
+                                        {field.options.map((opt) => {
+                                            const currentValues = (formData[field.key] as string[]) || [];
+                                            const isChecked = currentValues.includes(opt.value);
+                                            return (
+                                                <Checkbox
+                                                    key={opt.value}
+                                                    label={opt.label}
+                                                    checked={isChecked}
+                                                    onChange={(e) => {
+                                                        const newVal = e.target.checked
+                                                            ? [...currentValues, opt.value]
+                                                            : currentValues.filter((v) => v !== opt.value);
+                                                        updateField(field.key, newVal);
+                                                    }}
+                                                />
+                                            );
+                                        })}
+                                    </div>
                                 ) : (
                                     <Input
                                         type={field.type}

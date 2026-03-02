@@ -3,7 +3,10 @@ import { InstallersClient } from './InstallersClient';
 
 export default async function AdminInstallersPage() {
     const supabase = await createClient();
-    const { data: installers } = await supabase.from('installers').select('*').order('name');
+    const [installers, provinces] = await Promise.all([
+        supabase.from('installers').select('*').order('name'),
+        supabase.from('provinces').select('id, name').order('name')
+    ]);
 
-    return <InstallersClient installers={installers ?? []} />;
+    return <InstallersClient installers={installers.data ?? []} provinces={provinces.data ?? []} />;
 }

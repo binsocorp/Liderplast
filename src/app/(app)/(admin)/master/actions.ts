@@ -20,7 +20,9 @@ type EntityTable =
     | 'finance_subcategories'
     | 'finance_payment_methods'
     | 'finance_vendors'
-    | 'finance_cost_centers';
+    | 'finance_cost_centers'
+    | 'reseller_price_lists'
+    | 'reseller_prices';
 
 export async function createEntity(table: EntityTable, data: Record<string, unknown>) {
     const supabase = await createClient();
@@ -73,10 +75,10 @@ export async function deleteEntity(table: EntityTable, id: string) {
         redirect('/orders');
     }
 
-    const { error } = await supabase
-        .from(table)
+    const { error } = await (supabase
+        .from(table as any)
         .delete()
-        .eq('id', id);
+        .eq('id', id) as any);
 
     if (error) return { error: error.message };
     revalidatePath(`/master/${table}`);
@@ -91,6 +93,17 @@ export async function upsertPrices(prices: { catalog_item_id: string; province_i
     const { error } = await supabase
         .from('prices')
         .upsert(prices as any, { onConflict: 'catalog_item_id,province_id' });
+
+    if (error) return { error: error.message };
+    revalidatePath('/master');
+    return { success: true };
+}
+
+export async function upsertResellerPrices(prices: { price_list_id: string; catalog_item_id: string; unit_price_net: number }[]) {
+    const supabase = await createClient();
+    const { error } = await supabase
+        .from('reseller_prices')
+        .upsert(prices as any, { onConflict: 'price_list_id,catalog_item_id' });
 
     if (error) return { error: error.message };
     revalidatePath('/master');

@@ -16,6 +16,8 @@ const MASTER_SECTIONS = [
     { name: 'Subcat. Finanzas', href: '/master/finance-subcategories', description: 'Desglose de categorías financieras', icon: '📉' },
     { name: 'Medios de Pago', href: '/master/finance-payment-methods', description: 'Cajas y cuentas bancarias', icon: '💳' },
     { name: 'Proveedores (F)', href: '/master/finance-vendors', description: 'Proveedores financieros', icon: '🏢' },
+    { name: 'Listas de Precios (R)', href: '/master/reseller-price-lists', description: 'Gestionar listas de precios para revendedores', icon: '📋' },
+    { name: 'Precios Revendedores', href: '/master/reseller-prices', description: 'Matriz de precios para listas de revendedores', icon: '🏷️' },
 ];
 
 export default function MasterDataPage() {

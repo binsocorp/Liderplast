@@ -24,8 +24,8 @@ export async function createOrder(formData: OrderFormData) {
     let deliveryAddress = parsed.data.delivery_address;
 
     if (parsed.data.client_id) {
-        const { data: client } = await supabase
-            .from('clients')
+        const { data: client } = await (supabase
+            .from('clients') as any)
             .select('name, address, city')
             .eq('id', parsed.data.client_id)
             .single();
@@ -123,16 +123,16 @@ export async function addOrderItem(formData: OrderItemFormData) {
     const supabase = await createClient();
 
     // Get catalog item name for description
-    const { data: catalogItem } = await supabase
-        .from('catalog_items')
+    const { data: catalogItem } = await (supabase
+        .from('catalog_items') as any)
         .select('name, type')
         .eq('id', parsed.data.catalog_item_id)
         .single();
 
-    const { error } = await supabase.from('order_items').insert({
+    const { error } = await (supabase.from('order_items') as any).insert({
         ...parsed.data,
-        description: parsed.data.description || catalogItem?.name || '',
-        type: (parsed.data.type || catalogItem?.type || 'PRODUCTO') as any,
+        description: parsed.data.description || (catalogItem as any)?.name || '',
+        type: (parsed.data.type || (catalogItem as any)?.type || 'PRODUCTO') as any,
     } as any);
 
     if (error) return { error: error.message };
@@ -151,9 +151,9 @@ export async function updateOrderItem(
 ) {
     const supabase = await createClient();
 
-    const { error } = await supabase
-        .from('order_items')
-        .update(data)
+    const { error } = await (supabase
+        .from('order_items') as any)
+        .update(data as any)
         .eq('id', itemId);
 
     if (error) return { error: error.message };
@@ -165,8 +165,7 @@ export async function updateOrderItem(
 export async function removeOrderItem(itemId: string, orderId: string) {
     const supabase = await createClient();
 
-    const { error } = await supabase
-        .from('order_items')
+    const { error } = await (supabase.from('order_items') as any)
         .delete()
         .eq('id', itemId);
 
@@ -208,21 +207,21 @@ export async function addKit(orderId: string, kitKey: string) {
         if (!catalogItem) continue;
 
         // Get price for this item in this province
-        const { data: priceData } = await supabase
-            .from('prices')
+        const { data: priceData } = await (supabase
+            .from('prices') as any)
             .select('unit_price_net')
-            .eq('catalog_item_id', catalogItem.id)
-            .eq('province_id', order.province_id)
+            .eq('catalog_item_id', (catalogItem as any).id)
+            .eq('province_id', (order as any).province_id)
             .eq('is_active', true)
             .single();
 
-        await supabase.from('order_items').insert({
+        await (supabase.from('order_items') as any).insert({
             order_id: orderId,
-            catalog_item_id: catalogItem.id,
-            type: catalogItem.type,
-            description: catalogItem.name,
+            catalog_item_id: (catalogItem as any).id,
+            type: (catalogItem as any).type,
+            description: (catalogItem as any).name,
             quantity: kitItem.quantity,
-            unit_price_net: priceData?.unit_price_net ?? 0,
+            unit_price_net: (priceData as any)?.unit_price_net ?? 0,
         });
     }
 
@@ -237,8 +236,8 @@ export async function addKit(orderId: string, kitKey: string) {
 export async function getPrice(catalogItemId: string, provinceId: string) {
     const supabase = await createClient();
 
-    const { data } = await supabase
-        .from('prices')
+    const { data } = await (supabase
+        .from('prices') as any)
         .select('unit_price_net')
         .eq('catalog_item_id', catalogItemId)
         .eq('province_id', provinceId)

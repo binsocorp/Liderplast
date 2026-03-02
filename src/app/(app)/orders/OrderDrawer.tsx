@@ -11,6 +11,7 @@ interface OrderRow extends Order {
     seller?: { id: string; name: string } | null;
     trip?: { id: string; trip_code: string; driver?: { name: string } } | null;
     installer?: { id: string; name: string } | null;
+    reseller?: { id: string; name: string } | null;
     order_items?: any[];
     _driver_name?: string;
     _trip_code?: string;
@@ -24,6 +25,7 @@ interface OrderDrawerProps {
         provinces: any[];
         installers: any[];
         trips: any[];
+        resellers: any[];
     };
 }
 
@@ -38,7 +40,7 @@ export function OrderDrawer({ order, onClose, lookups }: OrderDrawerProps) {
     useEffect(() => {
         if (order) {
             setNotes(order.notes || '');
-            setStatus(order.payment_status || 'PENDING');
+            setStatus(order.status || 'PENDIENTE');
             setInstallerId(order.installer_id || '');
             document.body.style.overflow = 'hidden';
         }
@@ -57,7 +59,7 @@ export function OrderDrawer({ order, onClose, lookups }: OrderDrawerProps) {
         try {
             await updateOrder(order.id, {
                 notes,
-                payment_status: status,
+                status: status as any,
                 installer_id: installerId || null
             });
             router.refresh();
@@ -106,7 +108,7 @@ export function OrderDrawer({ order, onClose, lookups }: OrderDrawerProps) {
                                     onChange={(e) => setStatus(e.target.value)}
                                     className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-700 focus:ring-2 focus:ring-primary-500/10 outline-none transition-all"
                                 >
-                                    <option value="PENDING">Pendiente</option>
+                                    <option value="PENDIENTE">Pendiente</option>
                                     <option value="CONFIRMADO">Confirmado</option>
                                     <option value="EN_VIAJE">En Viaje</option>
                                     <option value="ESPERANDO_INSTALACION">Esperando Instalación</option>
@@ -198,11 +200,13 @@ export function OrderDrawer({ order, onClose, lookups }: OrderDrawerProps) {
                         </h3>
                         <div className="grid grid-cols-1 gap-2">
                             {[
+                                { label: 'Canal', value: order.channel === 'REVENDEDOR' ? 'REVENDEDOR' : 'CLIENTE FINAL' },
+                                order.channel === 'REVENDEDOR' && { label: 'Revendedor', value: order.reseller?.name || '—' },
                                 { label: 'Localidad / Prov', value: `${order.city || ''}, ${order.province?.name || ''}` },
                                 { label: 'Dirección', value: order.delivery_address },
                                 { label: 'ID Flete (Viaje)', value: order._trip_code || <span className="text-gray-300">Pendiente</span> },
                                 { label: 'Conductor', value: order._driver_name || <span className="text-gray-300">Sin asignar</span> },
-                            ].map((f, i) => (
+                            ].filter(Boolean).map((f: any, i) => (
                                 <div key={i} className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0">
                                     <span className="text-[11px] font-black text-gray-400 uppercase tracking-tighter">{f.label}</span>
                                     <span className="text-sm font-bold text-gray-800 text-right">{f.value || '—'}</span>

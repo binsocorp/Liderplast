@@ -24,6 +24,7 @@ export const orderSchema = z.object({
     tax_amount_manual: z.coerce.number().min(0).default(0),
     trip_id: z.string().uuid().nullable().optional(),
     installer_id: z.string().uuid().nullable().optional(),
+    status: z.enum(['PENDIENTE', 'CONFIRMADO', 'EN_VIAJE', 'ESPERANDO_INSTALACION', 'COMPLETADO']).default('PENDIENTE'),
     notes: z.string().optional().default(''),
 }).refine(
     (data) => {
@@ -191,7 +192,8 @@ export const tripSchema = z.object({
     trip_date: z.string().min(1, 'La fecha es obligatoria'),
     driver_id: z.string().uuid('Seleccione un fletero'),
     vehicle_id: z.string().uuid('Seleccione un vehículo'),
-    cost: z.coerce.number().min(0, 'El costo no puede ser negativo').default(0),
+    cost: z.coerce.number().min(0, 'El costo presupuestado no puede ser negativo').default(0),
+    actual_cost: z.coerce.number().min(0, 'El costo real no puede ser negativo').default(0),
     description: z.string().optional().default(''),
     status: z.enum(['PLANIFICADO', 'EN_RUTA', 'ENTREGADO', 'CANCELADO']).default('PLANIFICADO'),
     notes: z.string().optional().default(''),

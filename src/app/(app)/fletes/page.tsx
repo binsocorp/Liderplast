@@ -41,7 +41,15 @@ export default async function FletesPage() {
 
     const { data: orders } = await supabase
         .from('orders')
-        .select('id, order_number, client_name, province_id, province:provinces(name)');
+        .select(`
+            id, 
+            order_number, 
+            client_name, 
+            province_id, 
+            freight_amount,
+            province:provinces(name),
+            order_items(id, description, catalog_item:catalog_items(name))
+        `);
     // .not('status', 'eq', 'CANCELADO')
     // .not('status', 'eq', 'ENTREGADO');
 

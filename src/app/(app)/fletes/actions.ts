@@ -47,13 +47,20 @@ export async function createTrip(formData: any) {
             .insert(assignments);
 
         if (assignError) {
-            // Rollback trip creation if assignment fails (optional, but good for consistency)
+            // Rollback trip creation if assignment fails
             await (supabase.from('trips') as any).delete().eq('id', (trip as any).id);
             return { error: 'Error vinculando pedidos: ' + assignError.message };
         }
 
-        // Update order status removed
-        // await (supabase.from('orders') as any).update({ status: 'VIAJE_ASIGNADO' }).in('id', order_ids);
+        // 4. Sync: Update orders table trip_id column
+        const { error: syncError } = await (supabase.from('orders') as any)
+            .update({ trip_id: trip.id })
+            .in('id', order_ids);
+
+        if (syncError) {
+            console.error('SYNC_ERROR: Failed to update orders.trip_id:', syncError);
+            // We don't rollback here as the bridge table is already set, but we log it.
+        }
     }
 
     revalidatePath('/fletes');
@@ -62,16 +69,29 @@ export async function createTrip(formData: any) {
 
 export async function updateTrip(id: string, formData: Partial<TripFormData>) {
     const supabase = await createClient();
-    const { error } = await (supabase.from('trips') as any).update(formData as any).eq('id', id);
+    const { error } = await (supabase.from('trips') as any).update({
+        ...formData,
+        updated_at: new Date().toISOString()
+    } as any).eq('id', id);
     if (error) return { error: error.message };
     revalidatePath('/fletes');
+    revalidatePath(`/fletes/${id}`);
     return { success: true };
 }
 
 export async function deleteTrip(id: string) {
     const supabase = await createClient();
+
+    // 1. Unlink orders
+    await (supabase.from('orders') as any).update({ trip_id: null }).eq('trip_id', id);
+
+    // 2. Delete bridge entries
+    await (supabase.from('trip_orders') as any).delete().eq('trip_id', id);
+
+    // 3. Delete Trip
     const { error } = await (supabase.from('trips') as any).delete().eq('id', id);
     if (error) return { error: error.message };
+
     revalidatePath('/fletes');
     return { success: true };
 }

@@ -7,13 +7,14 @@ import { OrderDrawer } from './OrderDrawer';
 import { OrderStats } from './OrderStats';
 import Link from 'next/link';
 
-interface OrderRow extends any {
+interface OrderRow {
     id: string;
     order_number: string;
     created_at: string;
     client_name: string;
     city: string;
     total_net: number;
+    status: string;
     payment_status: string;
     seller?: { name: string } | null;
     province?: { name: string } | null;
@@ -70,7 +71,7 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
         return orders.filter(order => {
             const matchesSearch = `${order.order_number} ${order.client_name} ${order.city} ${order.order_number?.split('-')[1] || ''}`.toLowerCase().includes(searchQuery.toLowerCase());
             const matchesProvince = !filterProvince || order.province?.name === filterProvince;
-            const matchesStatus = !filterStatus || order.payment_status === filterStatus;
+            const matchesStatus = !filterStatus || order.status === filterStatus;
             const matchesSeller = !filterSeller || order.seller?.name === filterSeller;
 
             return matchesSearch && matchesProvince && matchesStatus && matchesSeller;
@@ -89,7 +90,7 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
                 </Link>
             </div>
 
-            <OrderStats orders={orders} />
+            <OrderStats orders={orders as any} />
 
             {/* Toolbar: Search + Filters */}
             <div className="flex flex-col md:flex-row gap-4">
@@ -126,7 +127,7 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
                         className="bg-white border border-gray-200 rounded-2xl px-4 py-2 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500/20 shadow-sm transition-all"
                     >
                         <option value="">Todos los Estados</option>
-                        <option value="PENDING">Pendiente</option>
+                        <option value="PENDIENTE">Pendiente</option>
                         <option value="CONFIRMADO">Confirmado</option>
                         <option value="EN_VIAJE">En Viaje</option>
                         <option value="ESPERANDO_INSTALACION">Esperando Inst.</option>
@@ -214,7 +215,7 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <Badge status={order.payment_status || 'PENDING'} />
+                                                <Badge status={order.status || 'PENDIENTE'} />
                                             </td>
                                         </tr>
                                     );
