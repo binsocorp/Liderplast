@@ -68,7 +68,7 @@ export function ExpensesClient({
             key: 'amount',
             label: 'Monto',
             className: 'text-right font-bold',
-            render: (r) => `$${Number(r.amount).toLocaleString('es-AR')}`
+            render: (r) => `$${Number(r.amount).toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
         },
         {
             key: '_actions',

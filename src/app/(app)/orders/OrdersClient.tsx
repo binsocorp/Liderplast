@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { OrderDrawer } from './OrderDrawer';
 import { OrderStats } from './OrderStats';
+import { deleteOrder } from './actions';
 import Link from 'next/link';
 
 interface OrderRow {
@@ -36,6 +38,7 @@ interface OrdersClientProps {
 }
 
 export function OrdersClient({ orders, lookups }: OrdersClientProps) {
+    const router = useRouter();
     const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -145,9 +148,9 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
                                 {[
                                     '# Orden', 'Fecha', 'Vendedor', 'Casco',
                                     'Cant.', 'Provincia', 'Total',
-                                    'Flete', 'Instalador', 'Estado'
-                                ].map((header) => (
-                                    <th key={header} className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                                    'Flete', 'Instalador', 'Estado', ''
+                                ].map((header, i) => (
+                                    <th key={header + i} className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                                         {header}
                                     </th>
                                 ))}
@@ -161,7 +164,7 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
                                         <tr
                                             key={order.id}
                                             className="hover:bg-gray-50/80 transition-colors cursor-pointer group"
-                                            onClick={() => setSelectedOrder(order)}
+                                            onClick={() => setSelectedOrder(order as any)}
                                         >
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className="text-sm font-bold text-gray-900 group-hover:text-primary-600 transition-colors">
@@ -196,7 +199,7 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className="text-sm font-black text-gray-900">
-                                                    ${Number(order.total_net).toLocaleString('es-AR')}
+                                                    ${Number(order.total_net).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
@@ -217,6 +220,34 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <Badge status={order.status || 'PENDIENTE'} />
                                             </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="secondary"
+                                                        className="bg-indigo-50 border-indigo-100 text-indigo-700 hover:bg-indigo-100 font-bold"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            window.open(`/orders/${order.id}/remito`, '_blank');
+                                                        }}
+                                                    >
+                                                        Remito
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="danger"
+                                                        onClick={async (e) => {
+                                                            e.stopPropagation();
+                                                            if (confirm('¿Desea eliminar este pedido de forma permanente?')) {
+                                                                const res = await deleteOrder(order.id);
+                                                                if (res.error) alert('Error: ' + res.error);
+                                                            }
+                                                        }}
+                                                    >
+                                                        Eliminar
+                                                    </Button>
+                                                </div>
+                                            </td>
                                         </tr>
                                     );
                                 })
@@ -234,9 +265,9 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
 
             {/* Sidebar Drawer */}
             <OrderDrawer
-                order={selectedOrder}
+                order={selectedOrder as any}
                 onClose={() => setSelectedOrder(null)}
-                lookups={lookups}
+                lookups={lookups as any}
             />
         </div>
     );

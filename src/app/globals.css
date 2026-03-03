@@ -1,28 +1,28 @@
 @import "tailwindcss";
 
 @theme {
-  /* Sidebar — Indigo profundo */
-  --color-sidebar-900: #1e1b4b;
-  --color-sidebar-800: #312e81;
-  --color-sidebar-700: #3730a3;
-  --color-sidebar-600: #4338ca;
-  --color-sidebar-500: #6366f1;
-  --color-sidebar-400: #818cf8;
-  --color-sidebar-300: #a5b4fc;
-  --color-sidebar-200: #c7d2fe;
-  --color-sidebar-100: #e0e7ff;
+  /* Sidebar — Liderplast Blue (Navy) */
+  --color-sidebar-900: #002147;
+  --color-sidebar-800: #003366;
+  --color-sidebar-700: #004080;
+  --color-sidebar-600: #00509d;
+  --color-sidebar-500: #0056b3;
+  --color-sidebar-400: #007bff;
+  --color-sidebar-300: #3395ff;
+  --color-sidebar-200: #66afff;
+  --color-sidebar-100: #99caff;
 
-  /* Primary — Indigo */
-  --color-primary-50: #eef2ff;
-  --color-primary-100: #e0e7ff;
-  --color-primary-200: #c7d2fe;
-  --color-primary-300: #a5b4fc;
-  --color-primary-400: #818cf8;
-  --color-primary-500: #6366f1;
-  --color-primary-600: #4f46e5;
-  --color-primary-700: #4338ca;
-  --color-primary-800: #3730a3;
-  --color-primary-900: #312e81;
+  /* Primary — Match the logo blue */
+  --color-primary-50: #e6f0ff;
+  --color-primary-100: #cce0ff;
+  --color-primary-200: #99c2ff;
+  --color-primary-300: #66a3ff;
+  --color-primary-400: #3385ff;
+  --color-primary-500: #0066ff;
+  --color-primary-600: #0056b3;
+  --color-primary-700: #004080;
+  --color-primary-800: #003366;
+  --color-primary-900: #002147;
 
   --color-success-50: #f0fdf4;
   --color-success-100: #dcfce7;

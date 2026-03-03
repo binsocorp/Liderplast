@@ -205,6 +205,18 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
             }
         },
         {
+            key: 'profit',
+            label: 'Ganancia',
+            render: (row) => {
+                const profit = (Number(row.cost) || 0) - (Number(row.actual_cost) || 0);
+                return (
+                    <span className={`font-bold ${profit >= 0 ? 'text-green-600' : 'text-danger-600'}`}>
+                        ${profit.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                    </span>
+                );
+            }
+        },
+        {
             key: 'status',
             label: 'Estado',
             render: (row) => <Badge status={row.status} />,
@@ -213,9 +225,12 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
             key: '_actions',
             label: '',
             render: (row) => (
-                <div className="flex gap-2">
+                <div className="flex gap-2 justify-end">
+                    <Button size="sm" className="bg-indigo-900 border-indigo-900 text-white hover:bg-indigo-800" onClick={() => window.open(`/fletes/${row.id}/hoja-ruta`, '_blank')}>
+                        Hoja de Ruta
+                    </Button>
                     <Button size="sm" variant="secondary" onClick={() => router.push(`/fletes/${row.id}`)}>
-                        Ver/Editar Projecto
+                        Flete
                     </Button>
                     <Button size="sm" variant="danger" onClick={() => handleDelete(row.id)}>
                         Eliminar
@@ -261,18 +276,18 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
                 </div>
                 <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Costo Presupuestado</p>
-                    <p className="text-2xl font-black text-amber-600">${stats.totalBudgeted.toLocaleString('es-AR')}</p>
+                    <p className="text-2xl font-black text-amber-600">${stats.totalBudgeted.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</p>
                     <p className="text-[10px] text-amber-500 font-bold mt-1 uppercase italic opacity-50">Suma de costos teóricos</p>
                 </div>
                 <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Costo Real Pagado</p>
-                    <p className="text-2xl font-black text-primary-600">${stats.totalActual.toLocaleString('es-AR')}</p>
+                    <p className="text-2xl font-black text-primary-600">${stats.totalActual.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</p>
                     <p className="text-[10px] text-primary-500 font-bold mt-1 uppercase italic opacity-50">Monto total abonado</p>
                 </div>
                 <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Ganancia por Flete</p>
                     <p className={`text-2xl font-black ${stats.profit >= 0 ? 'text-green-600' : 'text-danger-600'}`}>
-                        ${stats.profit.toLocaleString('es-AR')}
+                        ${stats.profit.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                     </p>
                     <p className="text-[10px] text-gray-500 font-bold mt-1 uppercase italic opacity-50">Diferencia Presup./Real</p>
                 </div>
@@ -417,7 +432,7 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
                                                             )}
                                                         </div>
                                                         <div className="text-right">
-                                                            <p className="font-bold text-gray-900">${(order.freight_amount || 0).toLocaleString('es-AR')}</p>
+                                                            <p className="font-bold text-gray-900">${(order.freight_amount || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</p>
                                                             <p className="text-[9px] text-gray-400 font-bold uppercase italic">Flete Pedido</p>
                                                         </div>
                                                     </div>

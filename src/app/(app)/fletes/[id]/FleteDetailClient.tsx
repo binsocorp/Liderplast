@@ -80,6 +80,9 @@ export function FleteDetailClient({ trip, assignedOrders, availableOrders }: Fle
                 subtitle={`Destino: ${trip.exact_address} (${trip.province?.name || ''})`}
                 actions={
                     <div className="flex gap-2">
+                        <Button className="bg-indigo-900 border-indigo-900 text-white hover:bg-indigo-800" onClick={() => window.open(`/fletes/${trip.id}/hoja-ruta`, '_blank')}>
+                            Hoja de Ruta PDF
+                        </Button>
                         {trip.status === 'PLANIFICADO' && (
                             <Button onClick={() => handleStatusChange('EN_RUTA')}>Iniciar Viaje</Button>
                         )}
@@ -100,7 +103,7 @@ export function FleteDetailClient({ trip, assignedOrders, availableOrders }: Fle
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <CardContainer title="Fecha de Viaje" value={trip.trip_date ? new Intl.DateTimeFormat('es-AR').format(new Date(trip.trip_date)) : '-'} />
-                <CardContainer title="Costo" value={trip.cost ? `$${trip.cost.toLocaleString('es-AR')}` : '-'} />
+                <CardContainer title="Costo" value={trip.cost ? `$${trip.cost.toLocaleString('es-AR', { maximumFractionDigits: 0 })}` : '-'} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

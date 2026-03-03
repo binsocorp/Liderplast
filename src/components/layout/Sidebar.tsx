@@ -71,12 +71,19 @@ export function Sidebar({ isAdmin }: SidebarProps) {
     return (
         <aside className="w-64 bg-gradient-to-b from-sidebar-900 to-sidebar-800 flex flex-col h-full shadow-xl">
             {/* Logo */}
-            <div className="h-16 flex items-center px-6 border-b border-white/10">
-                <Link href="/orders" className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
-                        <span className="text-white font-bold text-sm">LP</span>
+            <div className="h-20 flex items-center px-6 border-b border-white/10">
+                <Link href="/orders" className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center p-1 shadow-lg shadow-black/20 overflow-hidden">
+                        <img
+                            src="/logo-institutional.png"
+                            alt="Liderplast"
+                            className="w-full h-full object-contain"
+                            onError={(e) => {
+                                (e.target as HTMLImageElement).src = '/logo.svg';
+                            }}
+                        />
                     </div>
-                    <span className="text-xl font-bold text-white tracking-tight">Liderplast</span>
+                    <span className="text-xl font-black text-white tracking-tighter uppercase">Liderplast</span>
                 </Link>
             </div>
 

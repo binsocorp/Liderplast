@@ -13,7 +13,7 @@ export function ResellersClient({ resellers }: { resellers: any[] }) {
                 { key: 'name', label: 'Nombre' },
                 { key: 'email', label: 'Email' },
                 { key: 'phone', label: 'Teléfono' },
-                { key: 'zone', label: 'Zona/Localidad' },
+                { key: 'contact', label: 'Zona/Localidad' },
                 {
                     key: 'is_active',
                     label: 'Estado',
@@ -24,7 +24,7 @@ export function ResellersClient({ resellers }: { resellers: any[] }) {
                 { key: 'name', label: 'Nombre / Razón Social', type: 'text', required: true },
                 { key: 'email', label: 'Email', type: 'email' },
                 { key: 'phone', label: 'Teléfono', type: 'text' },
-                { key: 'zone', label: 'Zona/Localidad', type: 'text' },
+                { key: 'contact', label: 'Zona/Localidad', type: 'text' },
                 { key: 'is_active', label: 'Activo', type: 'checkbox', defaultValue: true },
             ]}
         />

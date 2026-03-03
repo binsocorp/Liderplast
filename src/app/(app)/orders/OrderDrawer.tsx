@@ -52,7 +52,7 @@ export function OrderDrawer({ order, onClose, lookups }: OrderDrawerProps) {
     if (!order) return null;
 
     const formatMoney = (val: number) =>
-        `$${Number(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 0 })}`;
+        `$${Number(val || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })}`;
 
     const handleSave = async () => {
         setSaving(true);

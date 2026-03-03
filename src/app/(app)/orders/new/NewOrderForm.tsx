@@ -224,7 +224,7 @@ export function NewOrderForm({
             }
 
             console.log('Todo exitoso, redireccionando...');
-            router.push(`/orders/${orderId}`);
+            router.push(`/orders`);
         } catch (err: any) {
             console.error('Error fatal en handleSubmit:', err);
             setError('Error inesperado: ' + (err.message || String(err)));
@@ -325,16 +325,6 @@ export function NewOrderForm({
                             required
                             className="h-11 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary-500/10 transition-all"
                             placeholder="Ej: Córdoba"
-                        />
-                    </div>
-                    <div className="space-y-1.5 col-span-2">
-                        <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">Buscador Clientes (Opcional)</label>
-                        <Select
-                            value={clientId}
-                            onChange={e => handleClientChange(e.target.value)}
-                            options={(clients || []).map((c: any) => ({ value: c.id, label: c.name }))}
-                            placeholder="Buscar cliente registrado..."
-                            className="h-11 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary-500/10 transition-all italic font-medium"
                         />
                     </div>
                 </div>

@@ -82,8 +82,8 @@ export async function updateTrip(id: string, formData: Partial<TripFormData>) {
 export async function deleteTrip(id: string) {
     const supabase = await createClient();
 
-    // 1. Unlink orders
-    await (supabase.from('orders') as any).update({ trip_id: null }).eq('trip_id', id);
+    // 1. Unlink orders and reset their status
+    await (supabase.from('orders') as any).update({ trip_id: null, status: 'CONFIRMADO' }).eq('trip_id', id);
 
     // 2. Delete bridge entries
     await (supabase.from('trip_orders') as any).delete().eq('trip_id', id);
@@ -93,5 +93,6 @@ export async function deleteTrip(id: string) {
     if (error) return { error: error.message };
 
     revalidatePath('/fletes');
+    revalidatePath('/orders');
     return { success: true };
 }

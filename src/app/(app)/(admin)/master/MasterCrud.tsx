@@ -26,7 +26,7 @@ interface FieldDef {
 }
 
 interface MasterColumn extends Column<Record<string, unknown>> {
-    renderType?: 'boolean' | 'currency' | 'badge';
+    renderType?: 'currency' | 'badge' | 'id' | 'boolean';
 }
 
 interface MasterCrudProps {
@@ -99,17 +99,7 @@ export function MasterCrud({ title, entityTable, columns, fields, data, backHref
 
     // Map columns to include declarative rendering
     const mappedColumns: Column<Record<string, unknown>>[] = columns.map(col => {
-        if (col.renderType === 'boolean') {
-            return {
-                ...col,
-                render: (row: any) => (
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${row[col.key] ? 'bg-success-100 text-success-700' : 'bg-gray-100 text-gray-600'}`}>
-                        {row[col.key] ? 'Activo' : 'Inactivo'}
-                    </span>
-                )
-            };
-        }
-        if (col.renderType === 'badge') {
+        if (col.renderType === 'badge' || col.renderType === 'boolean') {
             return {
                 ...col,
                 render: (row: any) => (
@@ -120,7 +110,7 @@ export function MasterCrud({ title, entityTable, columns, fields, data, backHref
         if (col.renderType === 'currency') {
             return {
                 ...col,
-                render: (row: any) => row[col.key] ? `$${Number(row[col.key]).toLocaleString('es-AR')}` : '-'
+                render: (row: any) => row[col.key] ? `$${Number(row[col.key]).toLocaleString('es-AR', { maximumFractionDigits: 0 })}` : '-'
             };
         }
         return col as Column<Record<string, unknown>>;
@@ -135,21 +125,28 @@ export function MasterCrud({ title, entityTable, columns, fields, data, backHref
             className: 'w-24',
             render: (row) => (
                 <div className="flex items-center gap-1">
+                    {entityTable === 'reseller_price_lists' && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); router.push(`/master/reseller-prices`); }}
+                            className="p-1.5 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors"
+                            title="Gestionar Precios"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        </button>
+                    )}
                     <button
                         onClick={(e) => { e.stopPropagation(); openEdit(row); }}
-                        className="p-1.5 text-gray-400 hover:text-primary-600 transition-colors"
+                        className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                        title="Editar"
                     >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                     </button>
                     <button
                         onClick={(e) => { e.stopPropagation(); handleDelete(row.id as string); }}
-                        className="p-1.5 text-gray-400 hover:text-danger-500 transition-colors"
+                        className="p-1.5 text-gray-400 hover:text-danger-500 hover:bg-danger-50 rounded-lg transition-colors"
+                        title="Eliminar"
                     >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>
                 </div>
             ),
