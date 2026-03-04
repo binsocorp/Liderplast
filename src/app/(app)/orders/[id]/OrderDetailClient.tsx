@@ -16,8 +16,11 @@ export function OrderDetailClient({
     provinces,
     clients,
     sellers,
+    resellers,
     catalogItems,
     prices,
+    resellerLists,
+    resellerPrices,
     trips,
     occupancy,
 }: any) {
@@ -35,7 +38,10 @@ export function OrderDetailClient({
     const findCasco = () => items.find((i: any) => i.catalog_item?.name?.startsWith('P-'));
 
     // Header State
+    const [channel, setChannel] = useState<SalesChannel>(order.channel || 'INTERNO');
     const [sellerId, setSellerId] = useState(order.seller_id || '');
+    const [resellerId, setResellerId] = useState(order.reseller_id || '');
+    const [priceListId, setPriceListId] = useState('');
     const [provinceId, setProvinceId] = useState(order.province_id || '');
     const [clientId, setClientId] = useState(order.client_id || '');
     const [clientName, setClientName] = useState(order.client_name || '');
@@ -46,6 +52,18 @@ export function OrderDetailClient({
     const [distance, setDistance] = useState(String(order.distance_km || 0));
     // status state removed
     const [tripId, setTripId] = useState(order.trip_id || '');
+
+    // Auto-fill Default Price List when Channel is REVENDEDOR
+    useEffect(() => {
+        if (channel === 'REVENDEDOR' && !priceListId) {
+            const reseller = resellers?.find((r: any) => r.id === resellerId);
+            if (reseller?.default_price_list_id) {
+                setPriceListId(reseller.default_price_list_id);
+            } else if (resellerLists?.length > 0) {
+                setPriceListId(resellerLists[0].id);
+            }
+        }
+    }, [channel, resellerId, resellerLists, priceListId]);
 
     // Products State
     const cascoObj = findCasco();
@@ -89,9 +107,17 @@ export function OrderDetailClient({
 
     // Búsqueda de precio dinámico
     const getPrice = (itemId: string) => {
-        if (!provinceId || !itemId) return 0;
-        const p = prices.find((p: any) => p.province_id === provinceId && p.catalog_item_id === itemId);
-        return p ? Number(p.unit_price_net) : 0;
+        if (!itemId) return 0;
+
+        if (channel === 'REVENDEDOR') {
+            if (!priceListId) return 0;
+            const p = resellerPrices?.find((p: any) => p.price_list_id === priceListId && p.catalog_item_id === itemId);
+            return p ? Number(p.unit_price_net) : 0;
+        } else {
+            if (!provinceId) return 0;
+            const p = prices.find((p: any) => p.province_id === provinceId && p.catalog_item_id === itemId);
+            return p ? Number(p.unit_price_net) : 0;
+        }
     };
 
     function handleClientChange(id: string) {
@@ -124,7 +150,7 @@ export function OrderDetailClient({
         if (kitLimpieza) sum += getPrice(getItemId('Kit Limpieza'));
         sum += colorExtra;
         return sum;
-    }, [provinceId, cascoId, colorExtra, casilla, losetasL, losetasR, pastina, kitFiltrado, accesoriosInst, luces, prevClima, prevCascada, cascada, kitLimpieza]);
+    }, [provinceId, channel, priceListId, cascoId, colorExtra, casilla, losetasL, losetasR, pastina, kitFiltrado, accesoriosInst, luces, prevClima, prevCascada, cascada, kitLimpieza]);
 
     const totalAPagar = useMemo(() => {
         return subtotalProducto
@@ -147,7 +173,9 @@ export function OrderDetailClient({
             city,
             distance_km: Number(distance) || 0,
             province_id: provinceId,
-            seller_id: sellerId || null,
+            channel: channel,
+            seller_id: channel === 'INTERNO' ? (sellerId || null) : null,
+            reseller_id: channel === 'REVENDEDOR' ? (resellerId || null) : null,
             // status removed
             trip_id: tripId || null,
             discount_amount: Number(descuento) || 0,
@@ -220,16 +248,61 @@ export function OrderDetailClient({
                 </div>
 
                 {/* FIELDS GRID: ROW 1 */}
+                {/* FIELDS GRID: ROW 0 (Canales y Vendedores) */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="space-y-1.5">
-                        <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">Vendedor</label>
+                        <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">Canal de Venta</label>
                         <Select
-                            value={sellerId}
-                            onChange={e => setSellerId(e.target.value)}
-                            options={(sellers || []).map((s: any) => ({ value: s.id, label: s.name }))}
+                            value={channel}
+                            onChange={e => setChannel(e.target.value as SalesChannel)}
+                            options={[
+                                { value: 'INTERNO', label: 'Cliente Final' },
+                                { value: 'REVENDEDOR', label: 'Revendedor' }
+                            ]}
                             className="h-11 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary-500/10 transition-all font-bold text-gray-700"
                         />
                     </div>
+
+                    {channel === 'INTERNO' ? (
+                        <div className="space-y-1.5">
+                            <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">Vendedor</label>
+                            <Select
+                                value={sellerId}
+                                onChange={e => setSellerId(e.target.value)}
+                                options={(sellers || []).map((s: any) => ({ value: s.id, label: s.name }))}
+                                placeholder="Seleccionar vendedor..."
+                                className="h-11 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary-500/10 transition-all font-bold text-gray-700"
+                            />
+                        </div>
+                    ) : (
+                        <div className="space-y-1.5">
+                            <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">Revendedor</label>
+                            <Select
+                                value={resellerId}
+                                onChange={e => setResellerId(e.target.value)}
+                                options={(resellers || []).map((r: any) => ({ value: r.id, label: r.name }))}
+                                placeholder="Seleccionar revendedor..."
+                                className="h-11 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary-500/10 transition-all font-bold text-gray-700"
+                            />
+                        </div>
+                    )}
+
+                    {channel === 'REVENDEDOR' && (
+                        <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1 text-primary-600">Lista de Precios</label>
+                            <Select
+                                value={priceListId}
+                                onChange={e => setPriceListId(e.target.value)}
+                                options={(resellerLists || []).map((l: any) => ({ value: l.id, label: l.name }))}
+                                required
+                                className="h-11 rounded-xl border border-primary-200 bg-primary-50/10 focus:ring-4 focus:ring-primary-500/10 transition-all font-bold text-primary-700"
+                            />
+                        </div>
+                    )}
+                </div>
+
+                {/* FIELDS GRID: ROW 1 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-1.5">
                         <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">Provincia</label>
                         <Select

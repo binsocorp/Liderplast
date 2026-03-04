@@ -105,6 +105,13 @@ export function NewOrderForm({
         }
     }, [provinceId]);
 
+    // Auto-fill Default Price List when Channel is REVENDEDOR
+    useEffect(() => {
+        if (channel === 'REVENDEDOR' && !priceListId && resellerLists?.length > 0) {
+            setPriceListId(resellerLists[0].id);
+        }
+    }, [channel, resellerLists, priceListId]);
+
     function handleClientChange(id: string) {
         setClientId(id);
         const client = clients.find((c: any) => c.id === id);
@@ -245,7 +252,6 @@ export function NewOrderForm({
             <form onSubmit={handleSubmit} className="max-w-6xl mx-auto space-y-6 p-6 pb-20 text-sm bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
                 {/* HEADERS ROW */}
                 <div className="flex items-center gap-4 border-b border-gray-100 pb-6 mb-2">
-                    <div className="w-14 h-14 bg-primary-50 text-primary-700 rounded-2xl flex items-center justify-center font-black text-2xl border border-primary-100 shadow-sm rotate-3">Rv</div>
                     <div>
                         <h1 className="text-3xl font-black tracking-tight text-gray-900 leading-none">Registrar Venta</h1>
                         <p className="text-gray-400 font-medium mt-1">Cotización y registro de pedido de pileta</p>
