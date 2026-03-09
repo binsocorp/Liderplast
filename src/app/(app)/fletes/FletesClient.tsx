@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { FormField, FormGrid } from '@/components/ui/FormSection';
 import { Input, Textarea, Select } from '@/components/ui/FormInputs';
-import { createTrip, deleteTrip } from './actions';
+import { createTrip, updateTrip, deleteTrip } from './actions';
 import type { Trip, Driver, Vehicle, Province, TripOrder } from '@/lib/types/database';
 
 interface ExtendedTrip extends Trip {
@@ -30,10 +30,29 @@ interface FletesClientProps {
 export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, availableOrders }: FletesClientProps) {
     const router = useRouter();
     const [showModal, setShowModal] = useState(false);
+    const [editingTripId, setEditingTripId] = useState<string | null>(null);
     const [selectedMonth, setSelectedMonth] = useState(() => {
         const d = new Date();
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     });
+
+    const handlePrevMonth = () => {
+        const [year, month] = selectedMonth.split('-').map(Number);
+        const date = new Date(year, month - 2, 1);
+        setSelectedMonth(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+    };
+
+    const handleNextMonth = () => {
+        const [year, month] = selectedMonth.split('-').map(Number);
+        const date = new Date(year, month, 1);
+        setSelectedMonth(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+    };
+
+    const monthName = useMemo(() => {
+        const [year, month] = selectedMonth.split('-').map(Number);
+        const date = new Date(year, month - 1, 1);
+        return new Intl.DateTimeFormat('es-AR', { month: 'long', year: 'numeric' }).format(date);
+    }, [selectedMonth]);
 
     // Form State
     const [provinceId, setProvinceId] = useState('');
@@ -94,7 +113,7 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
         setCost(totalBudgetedCost);
     }, [totalBudgetedCost]);
 
-    async function handleCreate() {
+    async function handleSave() {
         setError(null);
         setLoading(true);
         try {
@@ -108,26 +127,53 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
                 actual_cost: actualCost,
                 description,
                 notes,
-                status: 'PLANIFICADO',
-                order_ids: selectedOrderIds,
+                status: editingTripId ? undefined : 'PLANIFICADO',
+                order_ids: editingTripId ? undefined : selectedOrderIds, // Order management in edit should be on the detail page or handled carefully
             };
 
-            const result = await createTrip(formData);
+            let result;
+            if (editingTripId) {
+                // Remove undefined fields for update
+                const updateData = Object.fromEntries(Object.entries(formData).filter(([_, v]) => v !== undefined));
+                result = await updateTrip(editingTripId, updateData as any);
+            } else {
+                result = await createTrip(formData);
+            }
+
             if (result.error) {
                 setError(result.error);
             } else {
                 setShowModal(false);
+                setEditingTripId(null);
                 resetForm();
                 router.refresh();
             }
         } catch (err: any) {
-            setError(err.message || 'Error al crear el flete');
+            setError(err.message || 'Error al guardar el flete');
         } finally {
             setLoading(false);
         }
     }
 
+    function handleEdit(trip: ExtendedTrip) {
+        setEditingTripId(trip.id);
+        setProvinceId(trip.province_id || '');
+        setExactAddress(trip.exact_address || '');
+        setTripDate(trip.trip_date || '');
+        setDriverId(trip.driver_id || '');
+        setVehicleId(trip.vehicle_id || '');
+        setCost(Number(trip.cost) || 0);
+        setActualCost(Number((trip as any).actual_cost) || 0);
+        setDescription(trip.description || '');
+        setNotes(trip.notes || '');
+        // For editing, we already have orders in detail page, but we can't easily sync them in this modal list right now
+        // So we keep order_ids empty for edit, updateTrip in actions doesn't touch them anyway
+        setSelectedOrderIds([]);
+        setShowModal(true);
+    }
+
     function resetForm() {
+        setEditingTripId(null);
         setProvinceId('');
         setExactAddress('');
         setTripDate('');
@@ -226,14 +272,17 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
             label: '',
             render: (row) => (
                 <div className="flex gap-2 justify-end">
-                    <Button size="sm" className="bg-indigo-900 border-indigo-900 text-white hover:bg-indigo-800" onClick={() => window.open(`/fletes/${row.id}/hoja-ruta`, '_blank')}>
-                        Hoja de Ruta
+                    <Button size="sm" variant="ghost" className="h-8 px-2 text-indigo-900 border-indigo-100 hover:bg-indigo-50" onClick={() => window.open(`/fletes/${row.id}/hoja-ruta`, '_blank')}>
+                        PDF
                     </Button>
-                    <Button size="sm" variant="secondary" onClick={() => router.push(`/fletes/${row.id}`)}>
-                        Flete
+                    <Button size="sm" variant="secondary" className="h-8" onClick={() => handleEdit(row)}>
+                        Editar
                     </Button>
-                    <Button size="sm" variant="danger" onClick={() => handleDelete(row.id)}>
-                        Eliminar
+                    <Button size="sm" variant="primary" className="h-8" onClick={() => router.push(`/fletes/${row.id}`)}>
+                        Gestionar
+                    </Button>
+                    <Button size="sm" variant="danger" className="h-8" onClick={() => handleDelete(row.id)}>
+                        Borrar
                     </Button>
                 </div>
             ),
@@ -255,14 +304,34 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
                 title="Gestión de Fletes"
                 subtitle={`${trips.length} fletes registrados`}
                 actions={
-                    <div className="flex gap-4">
-                        <Input
-                            type="month"
-                            value={selectedMonth}
-                            onChange={(e) => setSelectedMonth(e.target.value)}
-                            className="bg-white border-gray-200"
-                        />
-                        <Button onClick={() => setShowModal(true)}>+ Nuevo Flete</Button>
+                    <div className="flex gap-4 items-center">
+                        <div className="flex items-center bg-white border border-gray-200 rounded-xl px-2 py-1 shadow-sm gap-1">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 hover:bg-primary-50 text-gray-400 hover:text-primary-600 rounded-lg transition-colors flex items-center justify-center"
+                                onClick={handlePrevMonth}
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                </svg>
+                            </Button>
+                            <div className="flex flex-col items-center px-4 min-w-[140px]">
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter leading-none mb-0.5">Periodo</span>
+                                <span className="text-sm font-black text-indigo-950 capitalize tabular-nums">{monthName}</span>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 hover:bg-primary-50 text-gray-400 hover:text-primary-600 rounded-lg transition-colors flex items-center justify-center"
+                                onClick={handleNextMonth}
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                            </Button>
+                        </div>
+                        <Button onClick={() => { resetForm(); setShowModal(true); }}>+ Nuevo Flete</Button>
                     </div>
                 }
             />
@@ -303,13 +372,13 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
             <Modal
                 open={showModal}
                 onClose={() => setShowModal(false)}
-                title="Nuevo Flete"
+                title={editingTripId ? "Editar Flete" : "Nuevo Flete"}
                 size="xl"
                 footer={
                     <>
                         <Button variant="secondary" onClick={() => setShowModal(false)} disabled={loading}>Cancelar</Button>
-                        <Button onClick={handleCreate} disabled={loading || selectedOrderIds.length === 0}>
-                            {loading ? 'Creando...' : 'Crear Flete'}
+                        <Button onClick={handleSave} disabled={loading || (!editingTripId && selectedOrderIds.length === 0)}>
+                            {loading ? 'Guardando...' : editingTripId ? 'Guardar Cambios' : 'Crear Flete'}
                         </Button>
                     </>
                 }
@@ -381,39 +450,38 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
                             </FormGrid>
                         </div>
 
-                        {/* Pedidos Incluidos */}
-                        <div className="space-y-4">
-                            <h3 className="text-sm font-bold text-gray-900 border-b pb-2 uppercase tracking-wider flex justify-between">
-                                Pedidos del Viaje
-                                <span className={`text-[10px] px-2 py-0.5 rounded-full ${selectedOrderIds.length > 0 ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-500'}`}>
-                                    {selectedOrderIds.length} seleccionados
-                                </span>
-                            </h3>
+                        {/* Pedidos Incluidos (Solo en creación) */}
+                        {!editingTripId ? (
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-bold text-gray-900 border-b pb-2 uppercase tracking-wider flex justify-between">
+                                    Pedidos del Viaje
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${selectedOrderIds.length > 0 ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-500'}`}>
+                                        {selectedOrderIds.length} seleccionados
+                                    </span>
+                                </h3>
 
-                            {/* Buscador de pedidos */}
-                            <div className="relative">
-                                <Input
-                                    className="pl-9"
-                                    placeholder="Buscar pedido por ID o cliente..."
-                                    value={orderSearch}
-                                    onChange={(e) => setOrderSearch(e.target.value)}
-                                />
-                                <svg className="w-4 h-4 absolute left-3 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                            </div>
+                                {/* Buscador de pedidos */}
+                                <div className="relative">
+                                    <Input
+                                        className="pl-9"
+                                        placeholder="Buscar pedido por ID o cliente..."
+                                        value={orderSearch}
+                                        onChange={(e) => setOrderSearch(e.target.value)}
+                                    />
+                                    <svg className="w-4 h-4 absolute left-3 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
 
-                            <div className="border rounded-lg overflow-hidden flex flex-col h-[400px]">
-                                {/* Lista de pedidos disponibles */}
-                                <div className="flex-1 overflow-y-auto p-2 bg-gray-50 border-b">
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase mb-2 px-1">Disponibles {provinceId ? `en ${provinces.find(p => p.id === provinceId)?.name}` : '(Todas las provincias)'}</p>
-                                    {filteredAvailable.length === 0 ? (
-                                        <p className="text-xs text-center py-4 text-gray-400 italic">No se encontraron pedidos disponibles</p>
-                                    ) : (
-                                        <div className="space-y-1">
-                                            {filteredAvailable.map(order => {
-                                                const extra = formatExtra(order);
-                                                return (
+                                <div className="border rounded-lg overflow-hidden flex flex-col h-[400px]">
+                                    {/* Lista de pedidos disponibles */}
+                                    <div className="flex-1 overflow-y-auto p-2 bg-gray-50 border-b">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-2 px-1">Disponibles</p>
+                                        {filteredAvailable.length === 0 ? (
+                                            <p className="text-xs text-center py-4 text-gray-400 italic">No se encontraron pedidos disponibles</p>
+                                        ) : (
+                                            <div className="space-y-1">
+                                                {filteredAvailable.map(order => (
                                                     <div
                                                         key={order.id}
                                                         onClick={() => toggleOrder(order.id)}
@@ -425,51 +493,62 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
                                                                 <span className="text-[10px] bg-gray-100 px-1 text-gray-500 rounded font-bold uppercase">{order.province?.name}</span>
                                                             </div>
                                                             <p className="text-gray-600 truncate">{order.client_name}</p>
-                                                            {extra && (
-                                                                <p className="text-[10px] text-primary-600 font-bold mt-0.5 italic">
-                                                                    CASCO: {extra.model} {extra.color && `- ${extra.color}`}
-                                                                </p>
-                                                            )}
                                                         </div>
                                                         <div className="text-right">
                                                             <p className="font-bold text-gray-900">${(order.freight_amount || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</p>
-                                                            <p className="text-[9px] text-gray-400 font-bold uppercase italic">Flete Pedido</p>
                                                         </div>
                                                     </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
 
-                                {/* Lista de seleccionados */}
-                                <div className="h-1/3 overflow-y-auto p-2 bg-white">
-                                    <p className="text-[10px] font-bold text-primary-400 uppercase mb-2 px-1">Seleccionados ({selectedOrderIds.length})</p>
-                                    {selectedOrders.length === 0 ? (
-                                        <p className="text-xs text-center py-4 text-gray-400">Ningún pedido seleccionado</p>
-                                    ) : (
-                                        <div className="space-y-1">
-                                            {selectedOrders.map(order => (
-                                                <div
-                                                    key={order.id}
-                                                    className="flex items-center justify-between p-1.5 rounded bg-primary-50 border border-primary-200 text-xs"
-                                                >
-                                                    <div>
-                                                        <span className="font-bold text-primary-800">#{order.order_number}</span>
-                                                        <span className="ml-2 text-primary-600 truncate">{order.client_name}</span>
+                                    {/* Lista de seleccionados */}
+                                    <div className="h-1/3 overflow-y-auto p-2 bg-white">
+                                        <p className="text-[10px] font-bold text-primary-400 uppercase mb-2 px-1">Seleccionados ({selectedOrderIds.length})</p>
+                                        {selectedOrders.length === 0 ? (
+                                            <p className="text-xs text-center py-4 text-gray-400">Ningún pedido seleccionado</p>
+                                        ) : (
+                                            <div className="space-y-1">
+                                                {selectedOrders.map(order => (
+                                                    <div
+                                                        key={order.id}
+                                                        className="flex items-center justify-between p-1.5 rounded bg-primary-50 border border-primary-200 text-xs"
+                                                    >
+                                                        <div>
+                                                            <span className="font-bold text-primary-800">#{order.order_number}</span>
+                                                            <span className="ml-2 text-primary-600 truncate">{order.client_name}</span>
+                                                        </div>
+                                                        <button onClick={() => toggleOrder(order.id)} className="text-danger-500 hover:text-danger-700">
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                            </svg>
+                                                        </button>
                                                     </div>
-                                                    <button onClick={() => toggleOrder(order.id)} className="text-danger-500 hover:text-danger-700">
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center p-8 bg-gray-50 border border-gray-200 border-dashed rounded-xl h-full space-y-3">
+                                <div className="p-3 bg-indigo-50 rounded-full">
+                                    <svg className="w-8 h-8 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                                    </svg>
+                                </div>
+                                <div className="text-center">
+                                    <p className="text-sm font-bold text-indigo-950">Gestión de Pedidos</p>
+                                    <p className="text-xs text-gray-500 max-w-[200px] mt-1">
+                                        Para sumar o quitar pedidos de este viaje, utiliza el botón <span className="font-black text-primary-600">"Gestionar"</span> en la lista principal.
+                                    </p>
+                                </div>
+                                <Button size="sm" variant="secondary" onClick={() => { setShowModal(false); router.push(`/fletes/${editingTripId}`); }}>
+                                    Ir a Gestionar Pedidos
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </Modal>

@@ -214,8 +214,16 @@ export function OrderDetailClient({
         if (kitLimpieza) pushItem(getItemId('Kit Limpieza'), 'Kit Limpieza', 1, getPrice(getItemId('Kit Limpieza')));
 
         if (colorExtra > 0) {
-            const colorItemId = getItemId('Adicional por Color') || catalogItems.find((c: any) => c.name.toLowerCase().includes('adicional'))?.id;
-            pushItem(colorItemId, `Adicional por Color (${color})`, 1, colorExtra);
+            // Better lookup: Exact name first, then partial include 'adicional' AND 'color'
+            const colorItemId = getItemId('Adicional por Color') ||
+                catalogItems.find((c: any) => c.name.toLowerCase().includes('adicional') && c.name.toLowerCase().includes('color'))?.id ||
+                catalogItems.find((c: any) => c.name.toLowerCase().includes('adicional'))?.id;
+
+            if (colorItemId) {
+                pushItem(colorItemId, `Adicional por Color (${color})`, 1, colorExtra);
+            } else {
+                console.warn('AVISO: No se encontró ítem "Adicional" en el catálogo. El cargo de color no se guardará en la DB.');
+            }
         }
 
         await replaceOrderItems(order.id, bulkItems);
@@ -383,7 +391,7 @@ export function OrderDetailClient({
                                 {colorExtra > 0 && <span className="text-primary-600 text-[10px] font-bold bg-primary-50 px-1.5 py-0.5 rounded">+ {formatCurrency(colorExtra)}</span>}
                             </div>
                             <div className="py-1.5 px-3 border-r border-gray-200 flex justify-center">
-                                <Select value={color} onChange={e => setColor(e.target.value)} options={['Celeste', 'Blanco', 'Arena'].map(c => ({ value: c, label: c }))} uiSize="sm" className="h-8 w-full border border-gray-200" />
+                                <Select value={color} onChange={e => setColor(e.target.value)} options={['Celeste', 'Blanco', 'Arena', 'Verde'].map(c => ({ value: c, label: c }))} uiSize="sm" className="h-8 w-full border border-gray-200" />
                             </div>
                             <div className="py-2.5 px-4 text-right font-black tracking-tighter text-gray-900">{colorExtra > 0 ? formatCurrency(colorExtra) : '-'}</div>
                         </div>

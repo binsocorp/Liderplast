@@ -23,6 +23,24 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; d
     ENTREGADO: { label: 'Entregado', bg: 'bg-success-50', text: 'text-success-700' },
     CANCELADO: { label: 'Cancelado', bg: 'bg-danger-50', text: 'text-danger-700' },
 
+    // Inventario — tipos de ítem
+    MATERIA_PRIMA: { label: 'Materia Prima', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500' },
+    INSUMO: { label: 'Insumo', bg: 'bg-cyan-50', text: 'text-cyan-700', dot: 'bg-cyan-500' },
+    PRODUCTO_FINAL: { label: 'Producto Final', bg: 'bg-indigo-50', text: 'text-indigo-700', dot: 'bg-indigo-500' },
+
+    // Inventario — movimientos
+    ENTRADA: { label: 'Entrada', bg: 'bg-success-50', text: 'text-success-700', dot: 'bg-success-500' },
+    SALIDA: { label: 'Salida', bg: 'bg-danger-50', text: 'text-danger-700', dot: 'bg-danger-500' },
+    AJUSTE: { label: 'Ajuste', bg: 'bg-purple-50', text: 'text-purple-700', dot: 'bg-purple-500' },
+
+    // Inventario — stock
+    STOCK_OK: { label: 'OK', bg: 'bg-success-50', text: 'text-success-700', dot: 'bg-success-500' },
+    STOCK_BAJO: { label: 'Bajo', bg: 'bg-danger-50', text: 'text-danger-700', dot: 'bg-danger-500' },
+
+    // Compras
+    CONFIRMADA: { label: 'Confirmada', bg: 'bg-success-50', text: 'text-success-700', dot: 'bg-success-500' },
+    ANULADA: { label: 'Anulada', bg: 'bg-danger-50', text: 'text-danger-700', dot: 'bg-danger-500' },
+
     // Uso general
     ACTIVE: { label: 'Activo', bg: 'bg-success-50', text: 'text-success-700' },
     PAUSED: { label: 'Pausado', bg: 'bg-warning-50', text: 'text-warning-700' },

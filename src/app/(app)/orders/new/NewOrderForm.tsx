@@ -94,16 +94,11 @@ export function NewOrderForm({
         return color !== 'Celeste' ? 200000 : 0;
     }, [color, cascoId]);
 
-    // Auto-fill Services when Province changes
+    // Auto-fill Services when Context changes
     useEffect(() => {
-        if (provinceId) {
-            setFlete(String(getPrice(getItemId('Flete Base'))));
-            setInstalacion(String(getPrice(getItemId('Instalación Base'))));
-        } else {
-            setFlete('0');
-            setInstalacion('0');
-        }
-    }, [provinceId]);
+        setFlete(String(getPrice(getItemId('Flete Base'))));
+        setInstalacion(String(getPrice(getItemId('Instalación Base'))));
+    }, [provinceId, channel, priceListId]);
 
     // Auto-fill Default Price List when Channel is REVENDEDOR
     useEffect(() => {
@@ -214,8 +209,17 @@ export function NewOrderForm({
             if (kitLimpieza) pushItem(getItemId('Kit Limpieza'), 'Kit Limpieza', 1, getPrice(getItemId('Kit Limpieza')));
 
             if (colorExtra > 0) {
-                const colorItemId = getItemId('Adicional por Color') || catalogItems.find((c: any) => c.name.toLowerCase().includes('adicional'))?.id;
-                pushItem(colorItemId, `Adicional por Color (${color})`, 1, colorExtra);
+                // Better lookup: Exact name first, then partial include 'adicional' AND 'color'
+                const colorItemId = getItemId('Adicional por Color') ||
+                    catalogItems.find((c: any) => c.name.toLowerCase().includes('adicional') && c.name.toLowerCase().includes('color'))?.id ||
+                    catalogItems.find((c: any) => c.name.toLowerCase().includes('adicional'))?.id;
+
+                if (colorItemId) {
+                    pushItem(colorItemId, `Adicional por Color (${color})`, 1, colorExtra);
+                    console.log('Item de color agregado:', colorItemId);
+                } else {
+                    console.warn('AVISO: No se encontró ítem "Adicional" en el catálogo. El cargo de color no se guardará en la DB.');
+                }
             }
 
             if (bulkItems.length > 0) {
@@ -422,7 +426,7 @@ export function NewOrderForm({
                                 {colorExtra > 0 && <span className="text-primary-600 text-[10px] font-bold bg-primary-50 px-1.5 rounded">+ {formatCurrency(colorExtra)}</span>}
                             </div>
                             <div className="py-1.5 px-3 border-r border-gray-200 flex justify-center">
-                                <Select value={color} onChange={e => setColor(e.target.value)} options={['Celeste', 'Blanco', 'Arena'].map(c => ({ value: c, label: c }))} uiSize="sm" className="h-8 w-full" />
+                                <Select value={color} onChange={e => setColor(e.target.value)} options={['Celeste', 'Blanco', 'Arena', 'Verde'].map(c => ({ value: c, label: c }))} uiSize="sm" className="h-8 w-full" />
                             </div>
                             <div className="py-1.5 px-3 text-right font-medium">{colorExtra > 0 ? formatCurrency(colorExtra) : '-'}</div>
                         </div>

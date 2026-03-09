@@ -245,3 +245,83 @@ export const subscriptionExpenseSchema = z.object({
 });
 
 export type SubscriptionExpenseFormData = z.infer<typeof subscriptionExpenseSchema>;
+
+// -----------------------------------------------
+// Inventory Items
+// -----------------------------------------------
+
+export const inventoryItemSchema = z.object({
+    name: z.string().min(1, 'El nombre es obligatorio'),
+    type: z.enum(['MATERIA_PRIMA', 'INSUMO', 'PRODUCTO_FINAL']),
+    unit: z.string().min(1, 'La unidad de medida es obligatoria'),
+    purchase_unit: z.string().nullable().optional().default(null),
+    conversion_factor: z.coerce.number().min(0.0001).default(1),
+    min_stock: z.coerce.number().min(0).default(0),
+    last_cost: z.coerce.number().min(0).default(0),
+    is_active: z.boolean().default(true),
+});
+
+export type InventoryItemFormData = z.infer<typeof inventoryItemSchema>;
+
+// -----------------------------------------------
+// Inventory Movements
+// -----------------------------------------------
+
+export const inventoryMovementSchema = z.object({
+    item_id: z.string().uuid('Seleccione un ítem'),
+    type: z.enum(['ENTRADA', 'SALIDA', 'AJUSTE']),
+    quantity: z.coerce.number().min(0.01, 'La cantidad debe ser mayor a 0'),
+    description: z.string().optional().default(''),
+    reference: z.string().optional().default(''),
+});
+
+export type InventoryMovementFormData = z.infer<typeof inventoryMovementSchema>;
+
+// -----------------------------------------------
+// Purchases
+// -----------------------------------------------
+
+export const purchaseSchema = z.object({
+    supplier_name: z.string().optional().default(''),
+    purchase_date: z.string().min(1, 'La fecha es obligatoria'),
+    voucher_type: z.string().optional().default(''),
+    voucher_number: z.string().optional().default(''),
+    notes: z.string().optional().default(''),
+    status: z.enum(['BORRADOR', 'CONFIRMADA', 'ANULADA']).default('CONFIRMADA'),
+});
+
+export type PurchaseFormData = z.infer<typeof purchaseSchema>;
+
+export const purchaseItemSchema = z.object({
+    item_id: z.string().uuid('Seleccione un ítem de inventario'),
+    quantity: z.coerce.number().min(0.01, 'La cantidad debe ser mayor a 0'),
+    unit_price: z.coerce.number().min(0, 'El precio no puede ser negativo'),
+});
+
+export type PurchaseItemFormData = z.infer<typeof purchaseItemSchema>;
+
+// -----------------------------------------------
+// BOM Items
+// -----------------------------------------------
+
+export const bomItemSchema = z.object({
+    product_id: z.string().uuid('Seleccione un producto'),
+    material_id: z.string().uuid('Seleccione un material'),
+    quantity_per_unit: z.coerce.number().min(0.0001, 'La cantidad debe ser mayor a 0'),
+    notes: z.string().optional().default(''),
+});
+
+export type BomItemFormData = z.infer<typeof bomItemSchema>;
+
+// -----------------------------------------------
+// Production Records
+// -----------------------------------------------
+
+export const productionRecordSchema = z.object({
+    product_id: z.string().uuid('Seleccione un producto'),
+    quantity: z.coerce.number().min(0.01, 'La cantidad debe ser mayor a 0'),
+    production_date: z.string().min(1, 'La fecha es obligatoria'),
+    notes: z.string().optional().default(''),
+});
+
+export type ProductionRecordFormData = z.infer<typeof productionRecordSchema>;

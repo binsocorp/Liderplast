@@ -17,7 +17,7 @@ export function CatalogClient({ catalogItems }: { catalogItems: any[] }) {
                     label: 'Tipo',
                     render: (row) => <Badge status={row.type as string} />
                 },
-                { key: 'category', label: 'Categoría' },
+
                 {
                     key: 'is_active',
                     label: 'Estado',
@@ -38,7 +38,7 @@ export function CatalogClient({ catalogItems }: { catalogItems: any[] }) {
                     defaultValue: 'PRODUCTO',
                     required: true
                 },
-                { key: 'category', label: 'Categoría', type: 'text' },
+
                 { key: 'description', label: 'Descripción Breve', type: 'textarea' },
                 { key: 'is_active', label: 'Activo', type: 'checkbox', defaultValue: true },
             ]}
