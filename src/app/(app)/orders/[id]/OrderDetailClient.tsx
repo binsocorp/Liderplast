@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Printer } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Input, Select } from '@/components/ui/FormInputs';
 import { Button } from '@/components/ui/Button';
@@ -52,6 +53,7 @@ export function OrderDetailClient({
     const [distance, setDistance] = useState(String(order.distance_km || 0));
     // status state removed
     const [tripId, setTripId] = useState(order.trip_id || '');
+    const [paidAmount, setPaidAmount] = useState(String(order.paid_amount || 0));
 
     // Auto-fill Default Price List when Channel is REVENDEDOR
     useEffect(() => {
@@ -158,6 +160,10 @@ export function OrderDetailClient({
             + Number(impuestos) + Number(otro) - Number(descuento);
     }, [subtotalProducto, flete, instalacion, viaticos, impuestos, otro, descuento]);
 
+    const saldoRestante = useMemo(() => {
+        return totalAPagar - Number(paidAmount || 0);
+    }, [totalAPagar, paidAmount]);
+
 
     async function handleSave() {
         setSaving(true);
@@ -184,6 +190,7 @@ export function OrderDetailClient({
             travel_amount: Number(viaticos) || 0,
             other_amount: Number(otro) || 0,
             tax_amount_manual: Number(impuestos) || 0,
+            paid_amount: Number(paidAmount) || 0,
         });
 
         if (orderResult?.error) {
@@ -246,10 +253,10 @@ export function OrderDetailClient({
                     </div>
                     <div className="flex gap-2">
                         <Button
-                            className="bg-indigo-900 border-indigo-900 text-white hover:bg-indigo-800 shadow-lg shadow-indigo-900/20 active:scale-95 transition-all"
+                            className="bg-indigo-900 border-indigo-900 text-white hover:bg-indigo-800 shadow-lg shadow-indigo-900/20 active:scale-95 transition-all flex items-center gap-2"
                             onClick={() => window.open(`/orders/${order.id}/remito`, '_blank')}
                         >
-                            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                            <Printer className="w-4 h-4" />
                             Imprimir Remito
                         </Button>
                     </div>
@@ -443,6 +450,23 @@ export function OrderDetailClient({
                             <SmallInput label="Impuestos" value={impuestos} onChange={setImpuestos} />
                             <SmallInput label="Otro" value={otro} onChange={setOtro} />
                             <SmallInput label="Descuento" value={descuento} onChange={setDescuento} className="text-red-500 font-bold" />
+                            <div className="space-y-1">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase ml-1">Pagado</span>
+                                <div className="flex items-center gap-2">
+                                    <div className="h-10 flex-1 px-3 flex items-center bg-white border border-gray-200 rounded-xl font-bold text-primary-600 shadow-sm">
+                                        {formatCurrency(Number(paidAmount))}
+                                    </div>
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-10 px-2 text-primary-600 hover:bg-primary-50 rounded-xl border border-dashed border-primary-200"
+                                        onClick={() => router.push(`/finance/income?orderId=${order.id}`)}
+                                        title="Registrar nuevo pago"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -465,7 +489,15 @@ export function OrderDetailClient({
                             )}
                             <div className="pt-2 border-t border-gray-100 flex justify-between items-center">
                                 <span className="text-gray-900 font-black uppercase text-[10px] tracking-widest">Total Final</span>
-                                <span className="text-2xl font-black text-primary-700 tracking-tighter">{formatCurrency(totalAPagar)}</span>
+                                <span className="text-xl font-black text-gray-900 tracking-tighter">{formatCurrency(totalAPagar)}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-gray-400 font-black uppercase text-[10px] tracking-widest">Pagado</span>
+                                <span className="text-lg font-black text-primary-600 tracking-tighter">{formatCurrency(Number(paidAmount))}</span>
+                            </div>
+                            <div className="pt-2 border-t border-dashed border-gray-200 flex justify-between items-center">
+                                <span className="text-gray-900 font-black uppercase text-[10px] tracking-widest">Saldo Restante</span>
+                                <span className={`text-2xl font-black tracking-tighter ${saldoRestante > 0 ? 'text-red-600' : 'text-green-600'}`}>{formatCurrency(saldoRestante)}</span>
                             </div>
                         </div>
                     </div>

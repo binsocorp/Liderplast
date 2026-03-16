@@ -59,9 +59,17 @@ export async function updateTripStatus(tripId: string, status: string) {
     const { error } = await (supabase
         .from('trips') as any)
         .update({ status })
-        .eq('id', tripId);
-
     if (error) return { error: error.message };
+
+    // IF starting the trip, sync all orders to "EN_VIAJE"
+    if (status === 'EN_RUTA') {
+        const { error: syncError } = await (supabase
+            .from('orders') as any)
+            .update({ status: 'EN_VIAJE' })
+            .eq('trip_id', tripId);
+
+        if (syncError) console.error('Error syncing order statuses:', syncError);
+    }
 
     revalidatePath(`/fletes/${tripId}`);
     revalidatePath(`/fletes`);

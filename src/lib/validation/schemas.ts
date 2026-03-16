@@ -22,6 +22,7 @@ export const orderSchema = z.object({
     travel_amount: z.coerce.number().min(0).default(0),
     other_amount: z.coerce.number().min(0).default(0),
     tax_amount_manual: z.coerce.number().min(0).default(0),
+    paid_amount: z.coerce.number().min(0).default(0),
     trip_id: z.string().uuid().nullable().optional(),
     installer_id: z.string().uuid().nullable().optional(),
     status: z.enum(['PENDIENTE', 'CONFIRMADO', 'EN_VIAJE', 'ESPERANDO_INSTALACION', 'COMPLETADO']).default('PENDIENTE'),

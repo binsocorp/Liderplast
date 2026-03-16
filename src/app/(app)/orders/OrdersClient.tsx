@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { Printer, Trash2, Plus, Search, Filter, Warehouse, Users, Store, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { OrderDrawer } from './OrderDrawer';
@@ -16,6 +17,7 @@ interface OrderRow {
     client_name: string;
     city: string;
     total_net: number;
+    paid_amount: number;
     status: string;
     payment_status: string;
     seller?: { name: string } | null;
@@ -23,6 +25,7 @@ interface OrderRow {
     trip?: { id: string; trip_code: string; driver?: { name: string } } | null;
     installer?: { name: string } | null;
     order_items?: any[];
+    channel?: string;
     _driver_name?: string;
     _trip_code?: string;
 }
@@ -46,6 +49,8 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
     const [filterProvince, setFilterProvince] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
     const [filterSeller, setFilterSeller] = useState('');
+    const [filterChannel, setFilterChannel] = useState<'ALL' | 'INTERNO' | 'REVENDEDOR'>('ALL');
+    const [onlyWithDebt, setOnlyWithDebt] = useState(false);
 
     const getCascoInfo = (items: any[] = []) => {
         const cascoitem = items.find(i =>
@@ -76,10 +81,12 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
             const matchesProvince = !filterProvince || order.province?.name === filterProvince;
             const matchesStatus = !filterStatus || order.status === filterStatus;
             const matchesSeller = !filterSeller || order.seller?.name === filterSeller;
+            const matchesChannel = filterChannel === 'ALL' || order.channel === filterChannel;
+            const matchesDebt = !onlyWithDebt || (Number(order.total_net) - Number(order.paid_amount || 0)) > 0;
 
-            return matchesSearch && matchesProvince && matchesStatus && matchesSeller;
+            return matchesSearch && matchesProvince && matchesStatus && matchesSeller && matchesChannel && matchesDebt;
         });
-    }, [orders, searchQuery, filterProvince, filterStatus, filterSeller]);
+    }, [orders, searchQuery, filterProvince, filterStatus, filterSeller, filterChannel, onlyWithDebt]);
 
     return (
         <div className="space-y-6">
@@ -87,7 +94,7 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
                 <h1 className="text-2xl font-black text-indigo-950 tracking-tight">Gestión de Pedidos</h1>
                 <Link href="/orders/new">
                     <Button className="rounded-2xl px-6 bg-primary-600 hover:bg-primary-700 shadow-lg shadow-primary-500/20 active:scale-95 transition-all flex items-center gap-2">
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                        <Plus className="w-5 h-5" />
                         Añadir Pedido
                     </Button>
                 </Link>
@@ -95,13 +102,58 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
 
             <OrderStats orders={orders as any} />
 
+            {/* Canal Filter (Segmented Control) */}
+            <div className="flex bg-gray-100/50 p-1.5 rounded-3xl w-fit border border-gray-200 shadow-inner">
+                <button
+                    onClick={() => setFilterChannel('ALL')}
+                    className={`px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${filterChannel === 'ALL'
+                        ? 'bg-white text-primary-700 shadow-lg shadow-gray-200/50 scale-100'
+                        : 'text-gray-400 hover:text-gray-600 scale-95 hover:scale-100'
+                        }`}
+                >
+                    <Filter className="w-4 h-4" />
+                    Ambos
+                </button>
+                <button
+                    onClick={() => setFilterChannel('INTERNO')}
+                    className={`px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${filterChannel === 'INTERNO'
+                        ? 'bg-white text-primary-700 shadow-lg shadow-gray-200/50 scale-100'
+                        : 'text-gray-400 hover:text-gray-600 scale-95 hover:scale-100'
+                        }`}
+                >
+                    <Users className="w-4 h-4" />
+                    Cliente Final
+                </button>
+                <button
+                    onClick={() => setFilterChannel('REVENDEDOR')}
+                    className={`px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${filterChannel === 'REVENDEDOR'
+                        ? 'bg-white text-primary-700 shadow-lg shadow-gray-200/50 scale-100'
+                        : 'text-gray-400 hover:text-gray-600 scale-95 hover:scale-100'
+                        }`}
+                >
+                    <Store className="w-4 h-4" />
+                    Revendedor
+                </button>
+
+                <div className="w-px h-6 bg-gray-200 mx-2 self-center" />
+
+                <button
+                    onClick={() => setOnlyWithDebt(!onlyWithDebt)}
+                    className={`px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${onlyWithDebt
+                        ? 'bg-red-50 text-red-600 shadow-lg shadow-red-200/50 scale-100 border border-red-100'
+                        : 'text-gray-400 hover:text-gray-600 scale-95 hover:scale-100'
+                        }`}
+                >
+                    <AlertCircle className="w-4 h-4" />
+                    Solo con Deuda
+                </button>
+            </div>
+
             {/* Toolbar: Search + Filters */}
             <div className="flex flex-col md:flex-row gap-4">
                 <div className="relative flex-1 group">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <svg className="h-5 h-5 text-gray-400 group-focus-within:text-primary-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
+                        <Search className="h-5 w-5 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
                     </div>
                     <input
                         type="text"
@@ -113,29 +165,7 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
                 </div>
 
                 <div className="flex gap-2">
-                    <select
-                        value={filterProvince}
-                        onChange={(e) => setFilterProvince(e.target.value)}
-                        className="bg-white border border-gray-200 rounded-2xl px-4 py-2 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500/20 shadow-sm transition-all"
-                    >
-                        <option value="">Todas las Provincias</option>
-                        {[...new Set(orders.map(o => o.province?.name).filter(Boolean))].map(p => (
-                            <option key={p} value={p}>{p}</option>
-                        ))}
-                    </select>
-
-                    <select
-                        value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value)}
-                        className="bg-white border border-gray-200 rounded-2xl px-4 py-2 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500/20 shadow-sm transition-all"
-                    >
-                        <option value="">Todos los Estados</option>
-                        <option value="PENDIENTE">Pendiente</option>
-                        <option value="CONFIRMADO">Confirmado</option>
-                        <option value="EN_VIAJE">En Viaje</option>
-                        <option value="ESPERANDO_INSTALACION">Esperando Inst.</option>
-                        <option value="COMPLETADO">Completado</option>
-                    </select>
+                    {/* Filtros movidos a los headers de la tabla */}
                 </div>
             </div>
 
@@ -145,25 +175,74 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-gray-50/50 border-b border-gray-100">
-                                {[
-                                    '# Orden', 'Fecha', 'Vendedor', 'Casco',
-                                    'Cant.', 'Provincia', 'Total',
-                                    'Flete', 'Instalador', 'Estado', ''
-                                ].map((header, i) => (
-                                    <th key={header + i} className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                                        {header}
-                                    </th>
-                                ))}
+                                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider"># Orden</th>
+                                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Fecha</th>
+                                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider min-w-[150px]">
+                                    <div className="flex flex-col gap-1">
+                                        <span>Vendedor</span>
+                                        <select
+                                            value={filterSeller}
+                                            onChange={(e) => setFilterSeller(e.target.value)}
+                                            className="bg-transparent border-0 p-0 text-[10px] focus:ring-0 cursor-pointer font-black text-primary-600 uppercase tracking-tight"
+                                        >
+                                            <option value="">Todos los Vend.</option>
+                                            {[...new Set(orders.map(o => o.seller?.name).filter(Boolean))].map(s => (
+                                                <option key={s} value={s}>{s}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </th>
+                                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Casco</th>
+                                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Cant.</th>
+                                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider min-w-[150px]">
+                                    <div className="flex flex-col gap-1">
+                                        <span>Provincia</span>
+                                        <select
+                                            value={filterProvince}
+                                            onChange={(e) => setFilterProvince(e.target.value)}
+                                            className="bg-transparent border-0 p-0 text-[10px] focus:ring-0 cursor-pointer font-black text-primary-600 uppercase tracking-tight"
+                                        >
+                                            <option value="">Todas las Prov.</option>
+                                            {[...new Set(orders.map(o => o.province?.name).filter(Boolean))].map(p => (
+                                                <option key={p} value={p}>{p}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </th>
+                                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Total</th>
+                                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Saldo</th>
+                                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Flete</th>
+                                <th className="px-4 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Inst.</th>
+                                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider min-w-[150px]">
+                                    <div className="flex flex-col gap-1">
+                                        <span>Estado</span>
+                                        <select
+                                            value={filterStatus}
+                                            onChange={(e) => setFilterStatus(e.target.value)}
+                                            className="bg-transparent border-0 p-0 text-[10px] focus:ring-0 cursor-pointer font-black text-primary-600 uppercase tracking-tight"
+                                        >
+                                            <option value="">Todos los Est.</option>
+                                            <option value="CONFIRMADO">Confirmado</option>
+                                            <option value="EN_VIAJE">En Viaje</option>
+                                            <option value="ESPERANDO_INSTALACION">Esperando Inst.</option>
+                                            <option value="COMPLETADO">Completado</option>
+                                        </select>
+                                    </div>
+                                </th>
+                                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider"></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
                             {filteredOrders.length > 0 ? (
                                 filteredOrders.map((order) => {
                                     const { model, color } = getCascoInfo(order.order_items);
+                                    const balance = Number(order.total_net) - Number(order.paid_amount || 0);
+                                    const isPaid = balance <= 0;
+
                                     return (
                                         <tr
                                             key={order.id}
-                                            className="hover:bg-gray-50/80 transition-colors cursor-pointer group"
+                                            className={`transition-colors cursor-pointer group ${isPaid ? 'bg-green-50/40 hover:bg-green-50/80' : 'bg-red-50/30 hover:bg-red-50/60'}`}
                                             onClick={() => setSelectedOrder(order as any)}
                                         >
                                             <td className="px-6 py-4 whitespace-nowrap">
@@ -203,6 +282,11 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className={`text-sm font-black ${balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                                    ${balance.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
                                                 {order._trip_code ? (
                                                     <div className="leading-tight">
                                                         <p className="font-bold text-gray-900 text-[13px]">{order._trip_code}</p>
@@ -212,7 +296,7 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
                                                     <span className="text-gray-300 text-[11px] italic font-medium">No asignado</span>
                                                 )}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
+                                            <td className="px-4 py-4 whitespace-nowrap">
                                                 <span className="text-sm text-gray-700 font-bold whitespace-nowrap">
                                                     {order.installer?.name || <span className="text-gray-300">S/I</span>}
                                                 </span>
@@ -225,17 +309,18 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
                                                     <Button
                                                         size="sm"
                                                         variant="secondary"
+                                                        icon={<Printer className="w-4 h-4" />}
                                                         className="bg-indigo-50 border-indigo-100 text-indigo-700 hover:bg-indigo-100 font-bold"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             window.open(`/orders/${order.id}/remito`, '_blank');
                                                         }}
-                                                    >
-                                                        Remito
-                                                    </Button>
+                                                        title="Ver Remito"
+                                                    />
                                                     <Button
                                                         size="sm"
                                                         variant="danger"
+                                                        icon={<Trash2 className="w-4 h-4" />}
                                                         onClick={async (e) => {
                                                             e.stopPropagation();
                                                             if (confirm('¿Desea eliminar este pedido de forma permanente?')) {
@@ -243,9 +328,8 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
                                                                 if (res.error) alert('Error: ' + res.error);
                                                             }
                                                         }}
-                                                    >
-                                                        Eliminar
-                                                    </Button>
+                                                        title="Eliminar Pedido"
+                                                    />
                                                 </div>
                                             </td>
                                         </tr>

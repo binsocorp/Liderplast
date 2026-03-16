@@ -10,6 +10,8 @@ export type ItemType = 'PRODUCTO' | 'SERVICIO';
 export type SellerType = 'INTERNO' | 'REVENDEDOR';
 export type BillingCycle = 'MONTHLY' | 'YEARLY' | 'OTHER';
 export type SubscriptionStatus = 'ACTIVE' | 'PAUSED' | 'CANCELLED';
+export type CategoryNature = 'OPERATIVO' | 'NO_OPERATIVO' | 'FINANCIERO' | 'EXTRAORDINARIO';
+export type ExpenseStatus = 'PAGADO' | 'PENDIENTE';
 
 // -----------------------------------------------
 // Row types
@@ -171,6 +173,7 @@ export interface Order {
     travel_amount: number;
     other_amount: number;
     tax_amount_manual: number;
+    paid_amount: number;
     total_net: number;
     trip_id: string | null;
     installer_id: string | null;
@@ -266,8 +269,14 @@ export interface Database {
             trip_orders: { Row: TripOrder; Insert: Partial<TripOrder>; Update: Partial<TripOrder> };
             orders: { Row: Order; Insert: Partial<Order>; Update: Partial<Order> };
             order_items: { Row: OrderItem; Insert: Partial<OrderItem>; Update: Partial<OrderItem> };
-            user_subscriptions: { Row: UserSubscription; Insert: Partial<UserSubscription>; Update: Partial<UserSubscription> };
-            subscription_expenses: { Row: SubscriptionExpense; Insert: Partial<SubscriptionExpense>; Update: Partial<SubscriptionExpense> };
+            finance_categories: { Row: FinanceCategory; Insert: Partial<FinanceCategory>; Update: Partial<FinanceCategory> };
+            finance_subcategories: { Row: FinanceSubcategory; Insert: Partial<FinanceSubcategory>; Update: Partial<FinanceSubcategory> };
+            finance_payment_methods: { Row: FinancePaymentMethod; Insert: Partial<FinancePaymentMethod>; Update: Partial<FinancePaymentMethod> };
+            finance_vendors: { Row: FinanceVendor; Insert: Partial<FinanceVendor>; Update: Partial<FinanceVendor> };
+            finance_cost_centers: { Row: FinanceCostCenter; Insert: Partial<FinanceCostCenter>; Update: Partial<FinanceCostCenter> };
+            finance_expenses: { Row: FinanceExpense; Insert: Partial<FinanceExpense>; Update: Partial<FinanceExpense> };
+            finance_income_categories: { Row: FinanceIncomeCategory; Insert: Partial<FinanceIncomeCategory>; Update: Partial<FinanceIncomeCategory> };
+            finance_income: { Row: FinanceIncome; Insert: Partial<FinanceIncome>; Update: Partial<FinanceIncome> };
         };
         Enums: {
             user_role: UserRole;
@@ -278,6 +287,90 @@ export interface Database {
             seller_type: SellerType;
             billing_cycle: BillingCycle;
             subscription_status: SubscriptionStatus;
+            category_nature: CategoryNature;
+            expense_status: ExpenseStatus;
         };
     };
+}
+
+export interface FinanceCategory {
+    id: string;
+    name: string;
+    nature: CategoryNature;
+    is_active: boolean;
+    created_at: string;
+}
+
+export interface FinanceSubcategory {
+    id: string;
+    category_id: string;
+    name: string;
+    is_active: boolean;
+    created_at: string;
+}
+
+export interface FinancePaymentMethod {
+    id: string;
+    name: string;
+    is_active: boolean;
+    created_at: string;
+}
+
+export interface FinanceVendor {
+    id: string;
+    name: string;
+    cuit: string | null;
+    is_active: boolean;
+    created_at: string;
+}
+
+export interface FinanceCostCenter {
+    id: string;
+    name: string;
+    is_active: boolean;
+    created_at: string;
+}
+
+export interface FinanceExpense {
+    id: string;
+    issue_date: string;
+    payment_date: string | null;
+    status: ExpenseStatus;
+    amount: number;
+    currency: string;
+    category_id: string;
+    subcategory_id: string | null;
+    payment_method_id: string;
+    description: string;
+    notes: string | null;
+    vendor_id: string | null;
+    document_type: string | null;
+    document_number: string | null;
+    cost_center_id: string | null;
+    created_by_user_id: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface FinanceIncomeCategory {
+    id: string;
+    name: string;
+    nature: CategoryNature;
+    is_active: boolean;
+    created_at: string;
+}
+
+export interface FinanceIncome {
+    id: string;
+    issue_date: string;
+    amount: number;
+    currency: string;
+    category_id: string;
+    payment_method_id: string;
+    description: string;
+    notes: string | null;
+    client_id: string | null;
+    created_by_user_id: string | null;
+    created_at: string;
+    updated_at: string;
 }

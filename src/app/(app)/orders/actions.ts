@@ -54,7 +54,7 @@ export async function createOrder(formData: OrderFormData) {
     return { data };
 }
 
-export async function updateOrder(id: string, formData: Partial<OrderFormData>) {
+export async function updateOrder(id: string, formData: Partial<OrderFormData> & { paid_amount?: number }) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: 'No autenticado' };

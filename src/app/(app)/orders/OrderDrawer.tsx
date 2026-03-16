@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
+import { Plus } from 'lucide-react';
 import { updateOrder } from './actions';
 import { useRouter } from 'next/navigation';
 import type { Order } from '@/lib/types/database';
@@ -35,13 +36,15 @@ export function OrderDrawer({ order, onClose, lookups }: OrderDrawerProps) {
     const [notes, setNotes] = useState('');
     const [status, setStatus] = useState('');
     const [installerId, setInstallerId] = useState('');
+    const [paidAmount, setPaidAmount] = useState(0);
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         if (order) {
             setNotes(order.notes || '');
-            setStatus(order.status || 'PENDIENTE');
+            setStatus(order.status || 'CONFIRMADO');
             setInstallerId(order.installer_id || '');
+            setPaidAmount(order.paid_amount || 0);
             document.body.style.overflow = 'hidden';
         }
         return () => {
@@ -60,7 +63,8 @@ export function OrderDrawer({ order, onClose, lookups }: OrderDrawerProps) {
             await updateOrder(order.id, {
                 notes,
                 status: status as any,
-                installer_id: installerId || null
+                installer_id: installerId || null,
+                paid_amount: Number(paidAmount) || 0
             });
             router.refresh();
             onClose();
@@ -108,7 +112,6 @@ export function OrderDrawer({ order, onClose, lookups }: OrderDrawerProps) {
                                     onChange={(e) => setStatus(e.target.value)}
                                     className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-700 focus:ring-2 focus:ring-primary-500/10 outline-none transition-all"
                                 >
-                                    <option value="PENDIENTE">Pendiente</option>
                                     <option value="CONFIRMADO">Confirmado</option>
                                     <option value="EN_VIAJE">En Viaje</option>
                                     <option value="ESPERANDO_INSTALACION">Esperando Instalación</option>
@@ -138,27 +141,43 @@ export function OrderDrawer({ order, onClose, lookups }: OrderDrawerProps) {
                             Resumen Financiero
                         </h3>
                         <div className="bg-indigo-50/30 rounded-2xl p-4 border border-indigo-100/50 space-y-3">
-                            <div className="flex justify-between items-center text-sm font-medium text-gray-600">
+                            <div className="flex justify-between text-gray-400">
                                 <span>Subtotal Productos</span>
-                                <span>{formatMoney(subtotalItems)}</span>
+                                <span>{formatMoney(order.subtotal_products)}</span>
                             </div>
-                            <div className="flex justify-between items-center text-sm font-medium text-gray-600">
-                                <span>Total Servicios (Flete/Inst.)</span>
-                                <span>{formatMoney(totalServicios)}</span>
+                            <div className="flex justify-between text-gray-400">
+                                <span>Total Servicios</span>
+                                <span>{formatMoney(order.subtotal_services)}</span>
                             </div>
-                            <div className="flex justify-between items-center text-sm font-medium text-gray-600">
-                                <span>Impuestos y Gastos</span>
-                                <span>{formatMoney(totalImpuestos)}</span>
-                            </div>
-                            {Number(order.discount_amount) > 0 && (
-                                <div className="flex justify-between items-center text-sm font-bold text-red-600">
-                                    <span>Descuento Aplicado</span>
+                            {order.discount_amount > 0 && (
+                                <div className="flex justify-between text-red-500">
+                                    <span>Descuento</span>
                                     <span>-{formatMoney(order.discount_amount)}</span>
                                 </div>
                             )}
-                            <div className="pt-2 border-t border-indigo-100 flex justify-between items-center">
-                                <span className="text-xs font-black text-indigo-900 uppercase">Total Neto Final</span>
-                                <span className="text-xl font-black text-indigo-950 tracking-tight">{formatMoney(order.total_net)}</span>
+                            <div className="flex justify-between pt-2 border-t border-gray-100 font-bold text-gray-900">
+                                <span>Total Neto Final</span>
+                                <span>{formatMoney(order.total_net)}</span>
+                            </div>
+                            <div className="flex justify-between items-center pt-2 text-primary-600 font-medium">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-bold text-primary-600 bg-primary-50 px-3 py-1 rounded-lg border border-primary-100">
+                                        {formatMoney(paidAmount)}
+                                    </span>
+                                    <button
+                                        onClick={() => router.push(`/finance/income?orderId=${order.id}`)}
+                                        className="p-2 text-primary-600 hover:bg-white hover:shadow-sm rounded-xl border border-dashed border-primary-200 transition-all"
+                                        title="Registrar nuevo pago"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="flex justify-between pt-2 border-t border-dashed border-gray-200 font-black text-lg">
+                                <span className="text-gray-500">Saldo Restante</span>
+                                <span className={order.total_net - paidAmount > 0 ? 'text-red-600' : 'text-green-600'}>
+                                    {formatMoney(order.total_net - paidAmount)}
+                                </span>
                             </div>
                         </div>
                     </div>

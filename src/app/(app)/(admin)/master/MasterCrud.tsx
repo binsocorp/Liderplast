@@ -9,7 +9,10 @@ import { Modal } from '@/components/ui/Modal';
 import { FormField, FormGrid } from '@/components/ui/FormSection';
 import { Input, Select, Textarea, Checkbox } from '@/components/ui/FormInputs';
 import { Badge } from '@/components/ui/Badge';
+import { Trash2, Pencil, Plus, Banknote } from 'lucide-react';
 import { createEntity, updateEntity, deleteEntity } from './actions';
+
+// ... (skipping some interfaces)
 
 // -----------------------------------------------
 // Generic CRUD Client component for Master Data
@@ -124,30 +127,33 @@ export function MasterCrud({ title, entityTable, columns, fields, data, backHref
             label: '',
             className: 'w-24',
             render: (row) => (
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 justify-end">
                     {entityTable === 'reseller_price_lists' && (
-                        <button
+                        <Button
+                            size="sm"
+                            variant="ghost"
                             onClick={(e) => { e.stopPropagation(); router.push(`/master/reseller-prices`); }}
-                            className="p-1.5 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors"
+                            className="p-1.5 text-indigo-500 hover:bg-indigo-50"
                             title="Gestionar Precios"
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        </button>
+                            icon={<Banknote className="w-4 h-4" />}
+                        />
                     )}
-                    <button
+                    <Button
+                        size="sm"
+                        variant="ghost"
                         onClick={(e) => { e.stopPropagation(); openEdit(row); }}
-                        className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                        className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50"
                         title="Editar"
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                    </button>
-                    <button
+                        icon={<Pencil className="w-4 h-4" />}
+                    />
+                    <Button
+                        size="sm"
+                        variant="ghost"
                         onClick={(e) => { e.stopPropagation(); handleDelete(row.id as string); }}
-                        className="p-1.5 text-gray-400 hover:text-danger-500 hover:bg-danger-50 rounded-lg transition-colors"
+                        className="p-1.5 text-gray-400 hover:text-danger-500 hover:bg-danger-50"
                         title="Eliminar"
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    </button>
+                        icon={<Trash2 className="w-4 h-4" />}
+                    />
                 </div>
             ),
         },
@@ -164,7 +170,7 @@ export function MasterCrud({ title, entityTable, columns, fields, data, backHref
                 backHref={backHref}
                 subtitle={`${data.length} registro${data.length !== 1 ? 's' : ''}`}
                 actions={
-                    <Button onClick={openCreate}>+ Nuevo</Button>
+                    <Button onClick={openCreate} icon={<Plus className="w-4 h-4" />}>Nuevo</Button>
                 }
             />
 

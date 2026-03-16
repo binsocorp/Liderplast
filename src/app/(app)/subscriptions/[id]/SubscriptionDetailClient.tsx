@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { DataTable, Column } from '@/components/ui/DataTable';
+import { Trash2, Save } from 'lucide-react';
 import { updateSubscription, deleteSubscription, addSubscriptionExpense, removeSubscriptionExpense } from '../actions';
 import type { UserSubscription, SubscriptionExpense, BillingCycle, SubscriptionStatus } from '@/lib/types/database';
 
@@ -21,17 +22,17 @@ export function SubscriptionDetailClient({ subscription }: SubscriptionDetailCli
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const [title, setTitle] = useState(subscription.title);
+    const [name, setName] = useState(subscription.name);
     const [status, setStatus] = useState(subscription.status);
     const [billingCycle, setBillingCycle] = useState(subscription.billing_cycle);
-    const [cost, setCost] = useState(String(subscription.cost));
+    const [amount, setAmount] = useState(String(subscription.amount));
     const [currency, setCurrency] = useState(subscription.currency);
-    const [nextBillingDate, setNextBillingDate] = useState(subscription.next_billing_date || '');
+    const [renewalDate, setRenewalDate] = useState(subscription.renewal_date || '');
     const [notes, setNotes] = useState(subscription.notes || '');
 
     // Expense modal
     const [showExpenseModal, setShowExpenseModal] = useState(false);
-    const [expenseAmount, setExpenseAmount] = useState(String(subscription.cost));
+    const [expenseAmount, setExpenseAmount] = useState(String(subscription.amount));
     const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
     const [expenseNotes, setExpenseNotes] = useState('');
 
@@ -39,12 +40,12 @@ export function SubscriptionDetailClient({ subscription }: SubscriptionDetailCli
         setSaving(true);
         setError(null);
         const result = await updateSubscription(subscription.id, {
-            title,
+            name,
             status,
             billing_cycle: billingCycle,
-            cost: parseFloat(cost) || 0,
-            currency,
-            next_billing_date: nextBillingDate || null,
+            amount: parseFloat(amount) || 0,
+            currency: currency as any,
+            renewal_date: renewalDate || null,
             notes,
         });
         if (result.error) setError(result.error);
@@ -91,14 +92,15 @@ export function SubscriptionDetailClient({ subscription }: SubscriptionDetailCli
             label: '',
             className: 'w-16 text-right',
             render: (row) => (
-                <button
-                    onClick={() => handleRemoveExpense(row.id)}
-                    className="text-gray-400 hover:text-danger-500 transition-colors"
-                >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                </button>
+                <div className="flex justify-end">
+                    <button
+                        onClick={() => handleRemoveExpense(row.id)}
+                        className="p-2 text-gray-400 hover:text-danger-500 transition-colors rounded-lg hover:bg-danger-50"
+                        title="Eliminar Gasto"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                </div>
             ),
         },
     ];
@@ -106,13 +108,15 @@ export function SubscriptionDetailClient({ subscription }: SubscriptionDetailCli
     return (
         <>
             <PageHeader
-                title={subscription.title}
+                title={subscription.name}
                 backHref="/subscriptions"
                 actions={
                     <div className="flex items-center gap-3">
                         <Badge status={subscription.status} />
-                        <Button variant="danger" size="sm" onClick={handleDelete}>Eliminar</Button>
-                        <Button onClick={handleSave} disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</Button>
+                        <Button variant="danger" size="sm" icon={<Trash2 className="w-4 h-4" />} onClick={handleDelete} title="Eliminar Suscripción" />
+                        <Button onClick={handleSave} disabled={saving} icon={<Save className="w-4 h-4" />} title="Guardar cambios">
+                            {saving ? 'Guardando...' : 'Guardar'}
+                        </Button>
                     </div>
                 }
             />
@@ -122,8 +126,8 @@ export function SubscriptionDetailClient({ subscription }: SubscriptionDetailCli
             <div className="space-y-6">
                 <FormSection title="Detalles de la Suscripción">
                     <FormGrid>
-                        <FormField label="Título" required>
-                            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+                        <FormField label="Nombre" required>
+                            <Input value={name} onChange={(e) => setName(e.target.value)} />
                         </FormField>
                         <FormField label="Estado" required>
                             <Select value={status} onChange={(e) => setStatus(e.target.value as SubscriptionStatus)} options={[
@@ -132,8 +136,8 @@ export function SubscriptionDetailClient({ subscription }: SubscriptionDetailCli
                                 { value: 'CANCELLED', label: 'Cancelado' }
                             ]} />
                         </FormField>
-                        <FormField label="Costo" required>
-                            <Input type="number" step="0.01" min="0" value={cost} onChange={(e) => setCost(e.target.value)} />
+                        <FormField label="Monto" required>
+                            <Input type="number" step="0.01" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} />
                         </FormField>
                         <FormField label="Moneda" required>
                             <Select value={currency} onChange={(e) => setCurrency(e.target.value)} options={[
@@ -149,7 +153,7 @@ export function SubscriptionDetailClient({ subscription }: SubscriptionDetailCli
                             ]} />
                         </FormField>
                         <FormField label="Próximo Cobro">
-                            <Input type="date" value={nextBillingDate} onChange={(e) => setNextBillingDate(e.target.value)} />
+                            <Input type="date" value={renewalDate} onChange={(e) => setRenewalDate(e.target.value)} />
                         </FormField>
                     </FormGrid>
                     <FormField label="Notas">

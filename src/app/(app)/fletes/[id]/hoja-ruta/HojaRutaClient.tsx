@@ -1,6 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/Button';
+import { Printer } from 'lucide-react';
 
 // Utility to format date
 const formatDate = (dateStr: string) => {
@@ -29,7 +30,10 @@ export function HojaRutaClient({ trip, orders }: { trip: any; orders: any[] }) {
                     </div>
                     <div className="flex gap-2">
                         <Button onClick={() => window.history.back()} variant="secondary">Volver</Button>
-                        <Button onClick={handlePrint} className="bg-primary-600">Imprimir / Guardar PDF</Button>
+                        <Button onClick={handlePrint} className="bg-primary-600 flex items-center gap-2">
+                            <Printer className="w-4 h-4" />
+                            Imprimir / Guardar PDF
+                        </Button>
                     </div>
                 </div>
 

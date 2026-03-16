@@ -38,3 +38,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# debug and local scripts
+/tmp/
+*.js
+!next.config.ts
+!eslint.config.mjs
+!postcss.config.mjs
+!import_bom.ts
+!check_items.ts
+!check_bom.ts
+!sync-fletes.js
+!check-db.js
+!check_orders.js
+!refactor_master.js
+!parse_prices.js

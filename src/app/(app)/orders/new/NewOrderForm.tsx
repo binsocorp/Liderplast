@@ -167,13 +167,14 @@ export function NewOrderForm({
                 seller_id: sellerId || null,
                 reseller_id: channel === 'REVENDEDOR' ? (resellerId || null) : null,
                 installer_id: channel === 'REVENDEDOR' ? null : null, // Default null for now
-                status: 'PENDIENTE' as any,
+                status: 'CONFIRMADO' as any,
                 discount_amount: Number(descuento) || 0,
                 freight_amount: Number(flete) || 0,
                 installation_amount: Number(instalacion) || 0,
                 travel_amount: Number(viaticos) || 0,
                 other_amount: Number(otro) || 0,
                 tax_amount_manual: Number(impuestos) || 0,
+                paid_amount: 0,
                 notes: notes,
             });
 
@@ -277,18 +278,18 @@ export function NewOrderForm({
                         />
                     </div>
 
-                    {channel === 'INTERNO' ? (
-                        <div className="space-y-1.5">
-                            <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">Vendedor</label>
-                            <Select
-                                value={sellerId}
-                                onChange={e => setSellerId(e.target.value)}
-                                options={(sellers || []).map((s: any) => ({ value: s.id, label: s.name }))}
-                                placeholder="Seleccionar vendedor..."
-                                className="h-11 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary-500/10 transition-all font-bold text-gray-700"
-                            />
-                        </div>
-                    ) : (
+                    <div className="space-y-1.5">
+                        <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">Vendedor Interno</label>
+                        <Select
+                            value={sellerId}
+                            onChange={e => setSellerId(e.target.value)}
+                            options={(sellers || []).map((s: any) => ({ value: s.id, label: s.name }))}
+                            placeholder="Seleccionar vendedor..."
+                            className="h-11 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary-500/10 transition-all font-bold text-gray-700"
+                        />
+                    </div>
+
+                    {channel === 'REVENDEDOR' && (
                         <div className="space-y-1.5">
                             <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">Revendedor</label>
                             <Select

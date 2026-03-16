@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Plus } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { DataTable, Column } from '@/components/ui/DataTable';
@@ -236,11 +237,7 @@ export function InventarioClient({ items }: Props) {
                 title="Inventario"
                 subtitle={`${activeItems.length} ítems · ${lowStockCount > 0 ? `⚠ ${lowStockCount} con stock bajo` : 'Stock OK'}`}
                 actions={
-                    <Button onClick={openNew} icon={
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                    }>
+                    <Button onClick={openNew} icon={<Plus className="w-4 h-4" />}>
                         Nuevo Ítem
                     </Button>
                 }
