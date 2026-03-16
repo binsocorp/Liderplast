@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Printer } from 'lucide-react';
+import { Printer, Plus } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Input, Select } from '@/components/ui/FormInputs';
 import { Button } from '@/components/ui/Button';
