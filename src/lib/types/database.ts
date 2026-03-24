@@ -374,3 +374,66 @@ export interface FinanceIncome {
     created_at: string;
     updated_at: string;
 }
+
+// -----------------------------------------------
+// Cotizaciones
+// -----------------------------------------------
+
+export type QuotationStatus = 'COTIZACION' | 'ACEPTADA' | 'CANCELADA';
+// VENCIDA es derivado: status='COTIZACION' && expires_at < hoy
+
+export interface Quotation {
+    id: string;
+    quotation_number: string;
+    client_id: string | null;
+    client_name: string;
+    client_phone: string;
+    client_document: string;
+    delivery_address: string;
+    city: string;
+    province_id: string;
+    channel: SalesChannel;
+    seller_id: string | null;
+    reseller_id: string | null;
+    status: QuotationStatus;
+    expires_at: string | null;           // DATE → 'YYYY-MM-DD'
+    freight_amount: number;
+    installation_amount: number;
+    travel_amount: number;
+    other_amount: number;
+    subtotal_products: number;
+    subtotal_services: number;
+    discount_amount: number;
+    tax_amount_manual: number;
+    total_net: number;
+    converted_order_id: string | null;
+    notes: string;
+    created_by: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface QuotationItem {
+    id: string;
+    quotation_id: string;
+    catalog_item_id: string;
+    type: ItemType;
+    description: string;
+    quantity: number;
+    unit_price_net: number;
+    subtotal_net: number;
+    sort_order: number;
+    created_at: string;
+}
+
+export interface QuotationWithRelations extends Quotation {
+    province?: Province;
+    seller?: Seller;
+    reseller?: Reseller;
+    items?: QuotationItem[];
+}
+
+/** Retorna true si la cotización está activa pero su fecha de validez ya venció */
+export function isQuotationExpired(q: Quotation): boolean {
+    return q.status === 'COTIZACION' && q.expires_at !== null && new Date(q.expires_at) < new Date();
+}

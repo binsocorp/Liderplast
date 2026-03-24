@@ -1,0 +1,39 @@
+import { createClient } from '@/lib/supabase/server';
+import { NuevaCotizacionForm } from './NuevaCotizacionForm';
+
+export default async function NuevaCotizacionPage() {
+    const supabase = await createClient();
+
+    const [
+        { data: provinces },
+        { data: clients },
+        { data: sellers },
+        { data: resellers },
+        { data: catalogItems },
+        { data: prices },
+        { data: resellerLists },
+        { data: resellerPrices },
+    ] = await Promise.all([
+        supabase.from('provinces').select('id, name').eq('is_sellable', true).order('name'),
+        supabase.from('clients').select('id, name, document, phone, address, city, province_id').eq('is_active', true).order('name'),
+        supabase.from('sellers').select('id, name, type').eq('is_active', true).order('name'),
+        supabase.from('resellers').select('id, name').eq('is_active', true).order('name'),
+        supabase.from('catalog_items').select('id, name, type').eq('is_active', true).order('name'),
+        supabase.from('prices').select('catalog_item_id, province_id, unit_price_net').eq('is_active', true),
+        supabase.from('reseller_price_lists').select('id, name').eq('is_active', true).order('name'),
+        supabase.from('reseller_prices').select('catalog_item_id, price_list_id, unit_price_net'),
+    ]);
+
+    return (
+        <NuevaCotizacionForm
+            provinces={provinces ?? []}
+            clients={clients ?? []}
+            sellers={sellers ?? []}
+            resellers={resellers ?? []}
+            catalogItems={catalogItems ?? []}
+            prices={prices ?? []}
+            resellerLists={resellerLists ?? []}
+            resellerPrices={resellerPrices ?? []}
+        />
+    );
+}

@@ -326,3 +326,44 @@ export const productionRecordSchema = z.object({
 });
 
 export type ProductionRecordFormData = z.infer<typeof productionRecordSchema>;
+
+// -----------------------------------------------
+// Cotizaciones
+// -----------------------------------------------
+
+export const quotationSchema = z.object({
+    client_id: z.string().uuid().nullable().optional(),
+    client_name: z.string().min(1, 'El nombre del cliente es obligatorio'),
+    client_document: z.string().optional().default(''),
+    client_phone: z.string().optional().default(''),
+    delivery_address: z.string().min(1, 'La dirección de entrega es obligatoria'),
+    city: z.string().min(1, 'La localidad es obligatoria'),
+    province_id: z.string().uuid('Seleccione una provincia'),
+    channel: z.enum(['INTERNO', 'REVENDEDOR']),
+    seller_id: z.string().uuid().nullable().optional(),
+    reseller_id: z.string().uuid().nullable().optional(),
+    expires_at: z.string().nullable().optional(),
+    freight_amount: z.coerce.number().min(0).default(0),
+    installation_amount: z.coerce.number().min(0).default(0),
+    travel_amount: z.coerce.number().min(0).default(0),
+    other_amount: z.coerce.number().min(0).default(0),
+    discount_amount: z.coerce.number().min(0).default(0),
+    tax_amount_manual: z.coerce.number().min(0).default(0),
+    notes: z.string().optional().default(''),
+}).refine(
+    (data) => !(data.channel === 'REVENDEDOR' && !data.reseller_id),
+    { message: 'El revendedor es obligatorio cuando el canal es REVENDEDOR', path: ['reseller_id'] }
+);
+
+export type QuotationFormData = z.infer<typeof quotationSchema>;
+
+export const quotationItemSchema = z.object({
+    quotation_id: z.string().uuid(),
+    catalog_item_id: z.string().uuid('Seleccione un producto/servicio'),
+    type: z.enum(['PRODUCTO', 'SERVICIO']),
+    description: z.string().default(''),
+    quantity: z.coerce.number().int().min(1, 'La cantidad debe ser al menos 1'),
+    unit_price_net: z.coerce.number().min(0, 'El precio no puede ser negativo'),
+});
+
+export type QuotationItemFormData = z.infer<typeof quotationItemSchema>;
