@@ -254,10 +254,10 @@ export function OrderDetailClient({
                     <div className="flex gap-2">
                         <Button
                             className="bg-indigo-900 border-indigo-900 text-white hover:bg-indigo-800 shadow-lg shadow-indigo-900/20 active:scale-95 transition-all flex items-center gap-2"
-                            onClick={() => window.open(`/orders/${order.id}/remito`, '_blank')}
+                            onClick={() => { window.location.href = `/api/orders/${order.id}/pdf`; }}
                         >
                             <Printer className="w-4 h-4" />
-                            Imprimir Remito
+                            Descargar Remito
                         </Button>
                     </div>
                 </div>

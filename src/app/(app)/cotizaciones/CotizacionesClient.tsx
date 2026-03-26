@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useTransition } from 'react';
 import Link from 'next/link';
-import { FileText, Plus, Search, ExternalLink, CheckCircle2, Wallet, DollarSign } from 'lucide-react';
+import { FileText, Plus, Search, ExternalLink, CheckCircle2, Wallet, DollarSign, Check, Trash2 } from 'lucide-react';
 import type { QuotationWithRelations } from '@/lib/types/database';
 import { isQuotationExpired } from '@/lib/types/database';
+import { User } from 'lucide-react';
 import { KPICard, KPIContainer } from '@/components/dashboard/KPICard';
 import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
+import { acceptQuotation, deleteQuotation } from './actions';
+import { useToast } from '@/components/ui/Toast';
 
 type StatusFilter = 'TODAS' | 'ACTIVAS' | 'ACEPTADAS' | 'CANCELADAS' | 'VENCIDAS';
 
@@ -44,12 +47,19 @@ function StatusBadge({ quotation }: { quotation: QuotationWithRelations }) {
 export function CotizacionesClient({
     quotations,
     sellers,
-    provinces
+    provinces,
+    emisors
 }: {
     quotations: QuotationWithRelations[];
     sellers: { id: string; name: string }[];
     provinces: { id: string; name: string }[];
+    emisors: { id: string; name: string }[];
 }) {
+    const { addToast } = useToast();
+    const [, startTransition] = useTransition();
+    const [processingId, setProcessingId] = useState<string | null>(null);
+    const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('TODAS');
     const [dateRange, setDateRange] = useState({
@@ -58,6 +68,34 @@ export function CotizacionesClient({
     });
     const [sellerId, setSellerId] = useState('');
     const [provinceId, setProvinceId] = useState('');
+    const [emisorId, setEmisorId] = useState('');
+
+    const handleAccept = (id: string) => {
+        setProcessingId(id);
+        startTransition(async () => {
+            const result = await acceptQuotation(id);
+            setProcessingId(null);
+            if ('error' in result) {
+                addToast({ type: 'error', title: 'Error', message: result.error });
+            } else {
+                addToast({ type: 'success', title: 'Cotización aceptada', message: `Pedido ${result.data.orderNumber} creado`, action: { label: 'Ver pedido', href: `/orders/${result.data.orderId}` } });
+            }
+        });
+    };
+
+    const handleDelete = (id: string) => {
+        setConfirmDeleteId(null);
+        setProcessingId(id);
+        startTransition(async () => {
+            const result = await deleteQuotation(id);
+            setProcessingId(null);
+            if ('error' in result) {
+                addToast({ type: 'error', title: 'Error', message: result.error });
+            } else {
+                addToast({ type: 'success', title: 'Cotización eliminada' });
+            }
+        });
+    };
 
     const tabs: { key: StatusFilter; label: string }[] = [
         { key: 'TODAS', label: 'Todas' },
@@ -77,10 +115,11 @@ export function CotizacionesClient({
 
             if (sellerId && q.seller_id !== sellerId) return false;
             if (provinceId && q.province_id !== provinceId) return false;
+            if (emisorId && q.created_by !== emisorId) return false;
 
             return true;
         });
-    }, [quotations, dateRange, sellerId, provinceId]);
+    }, [quotations, dateRange, sellerId, provinceId, emisorId]);
 
     const filtered = useMemo(() => {
         return baseFiltered.filter(q => {
@@ -179,6 +218,12 @@ export function CotizacionesClient({
                         value: provinceId,
                         options: provinces.map(p => ({ value: p.id, label: p.name })),
                         onChange: setProvinceId
+                    },
+                    {
+                        label: 'Emisor',
+                        value: emisorId,
+                        options: emisors.map(e => ({ value: e.id, label: e.name })),
+                        onChange: setEmisorId
                     }
                 ]}
             />
@@ -242,7 +287,9 @@ export function CotizacionesClient({
                     <thead>
                         <tr className="bg-gray-50 border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
                             <th className="py-3 px-4 text-left">COT #</th>
+                            <th className="py-3 px-4 text-left">Pedido</th>
                             <th className="py-3 px-4 text-left">Cliente</th>
+                            <th className="py-3 px-4 text-left">Emisor</th>
                             <th className="py-3 px-4 text-left">Canal</th>
                             <th className="py-3 px-4 text-left">Válida hasta</th>
                             <th className="py-3 px-4 text-right">Subtot. Productos</th>
@@ -255,7 +302,7 @@ export function CotizacionesClient({
                     <tbody className="divide-y divide-gray-50">
                         {filtered.length === 0 ? (
                             <tr>
-                                <td colSpan={9} className="py-16 text-center text-gray-400 text-sm">
+                                <td colSpan={11} className="py-16 text-center text-gray-400 text-sm">
                                     <FileText className="w-8 h-8 mx-auto mb-2 opacity-30" />
                                     No hay cotizaciones que coincidan con los filtros
                                 </td>
@@ -274,8 +321,29 @@ export function CotizacionesClient({
                                             </div>
                                         </td>
                                         <td className="py-3 px-4">
+                                            {q.status === 'ACEPTADA' ? (
+                                                (q as any).converted_order ? (
+                                                    <Link href={`/orders/${(q as any).converted_order.id}`} className="font-bold text-green-700 hover:text-green-900 underline underline-offset-2 transition-colors">
+                                                        {(q as any).converted_order.order_number}
+                                                    </Link>
+                                                ) : (
+                                                    <span className="text-red-500 font-bold text-xs" title="Inconsistencia: Aceptada pero sin pedido registrado">Sin pedido</span>
+                                                )
+                                            ) : (
+                                                <span className="text-gray-300">—</span>
+                                            )}
+                                        </td>
+                                        <td className="py-3 px-4">
                                             <div className="font-medium text-gray-900">{q.client_name || '-'}</div>
                                             <div className="text-[11px] text-gray-400">{q.city}{q.province?.name ? `, ${q.province.name}` : ''}</div>
+                                        </td>
+                                        <td className="py-3 px-4">
+                                            <div className="flex items-center gap-1.5">
+                                                <User className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                                                <span className="text-xs text-gray-700">
+                                                    {(q as any).creator?.full_name || 'Usuario eliminado'}
+                                                </span>
+                                            </div>
                                         </td>
                                         <td className="py-3 px-4">
                                             {q.channel === 'REVENDEDOR' ? (
@@ -309,7 +377,7 @@ export function CotizacionesClient({
                                             <StatusBadge quotation={q} />
                                         </td>
                                         <td className="py-3 px-4">
-                                            <div className="flex items-center justify-center gap-2">
+                                            <div className="flex items-center justify-center gap-1">
                                                 <Link
                                                     href={`/cotizaciones/${q.id}`}
                                                     className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
@@ -317,14 +385,14 @@ export function CotizacionesClient({
                                                 >
                                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                                                 </Link>
-                                                <Link
-                                                    href={`/cotizaciones/${q.id}/pdf`}
-                                                    target="_blank"
+                                                <a
+                                                    href={`/api/cotizaciones/${q.id}/pdf`}
+                                                    download={`COT-${q.quotation_number}.pdf`}
                                                     className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                                                    title="Ver PDF"
+                                                    title="Descargar PDF"
                                                 >
                                                     <FileText className="w-4 h-4" />
-                                                </Link>
+                                                </a>
                                                 {q.status === 'ACEPTADA' && q.converted_order_id && (
                                                     <Link
                                                         href={`/orders/${q.converted_order_id}`}
@@ -333,6 +401,44 @@ export function CotizacionesClient({
                                                     >
                                                         <ExternalLink className="w-4 h-4" />
                                                     </Link>
+                                                )}
+                                                {q.status === 'COTIZACION' && (
+                                                    <button
+                                                        onClick={() => handleAccept(q.id)}
+                                                        disabled={processingId === q.id}
+                                                        className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-40"
+                                                        title="Aceptar cotización y crear pedido"
+                                                    >
+                                                        <Check className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                                {q.status !== 'ACEPTADA' && (
+                                                    confirmDeleteId === q.id ? (
+                                                        <div className="flex items-center gap-1">
+                                                            <button
+                                                                onClick={() => handleDelete(q.id)}
+                                                                disabled={processingId === q.id}
+                                                                className="px-2 py-1 text-[10px] font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-40"
+                                                            >
+                                                                Confirmar
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setConfirmDeleteId(null)}
+                                                                className="px-2 py-1 text-[10px] font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                                                            >
+                                                                Cancelar
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => setConfirmDeleteId(q.id)}
+                                                            disabled={processingId === q.id}
+                                                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40"
+                                                            title="Eliminar cotización"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    )
                                                 )}
                                             </div>
                                         </td>

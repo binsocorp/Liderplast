@@ -157,7 +157,7 @@ export async function acceptQuotation(quotationId: string) {
         return { error: 'Solo se pueden aceptar cotizaciones en estado activo' };
     }
 
-    // Crear el pedido en estado BORRADOR
+    // Crear el pedido en estado PENDIENTE
     const { data: order, error: orderError } = await (supabase
         .from('orders') as any)
         .insert({
@@ -174,15 +174,16 @@ export async function acceptQuotation(quotationId: string) {
             discount_amount: (quotation as any).discount_amount,
             tax_amount_manual: (quotation as any).tax_amount_manual,
             notes: (quotation as any).notes,
-            status: 'BORRADOR',
+            status: 'PENDIENTE',
             created_by: user.id,
         } as any)
-        .select('id')
+        .select('id, order_number')
         .single();
 
     if (orderError) return { error: orderError.message };
 
     const orderId = (order as any).id;
+    const orderNumber = (order as any).order_number;
 
     // Copiar los ítems al pedido
     const items: any[] = (quotation as any).items ?? [];
@@ -201,7 +202,11 @@ export async function acceptQuotation(quotationId: string) {
             .from('order_items') as any)
             .insert(orderItems as any);
 
-        if (itemsError) return { error: itemsError.message };
+        if (itemsError) {
+            // Rollback: delete the created order since items failed
+            await (supabase.from('orders') as any).delete().eq('id', orderId);
+            return { error: 'Error al copiar ítems al pedido: ' + itemsError.message };
+        }
     }
 
     // Marcar cotización como ACEPTADA y vincular el pedido
@@ -214,11 +219,16 @@ export async function acceptQuotation(quotationId: string) {
         } as any)
         .eq('id', quotationId);
 
-    if (updateError) return { error: updateError.message };
+    if (updateError) {
+        // Rollback: delete order + items since quotation update failed
+        await (supabase.from('order_items') as any).delete().eq('order_id', orderId);
+        await (supabase.from('orders') as any).delete().eq('id', orderId);
+        return { error: 'Error al actualizar cotización: ' + updateError.message };
+    }
 
     revalidatePath('/cotizaciones');
     revalidatePath('/orders');
-    return { data: { orderId } };
+    return { data: { orderId, orderNumber } };
 }
 
 // -----------------------------------------------
@@ -242,6 +252,32 @@ export async function cancelQuotation(id: string) {
 
     revalidatePath('/cotizaciones');
     revalidatePath(`/cotizaciones/${id}`);
+    return { success: true };
+}
+
+// -----------------------------------------------
+// ELIMINAR COTIZACIÓN
+// -----------------------------------------------
+
+export async function deleteQuotation(id: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: 'No autenticado' };
+
+    const { data: quotation } = await (supabase.from('quotations') as any)
+        .select('status')
+        .eq('id', id)
+        .single();
+
+    if (!quotation) return { error: 'Cotización no encontrada' };
+    if (quotation.status === 'ACEPTADA') return { error: 'No se puede eliminar una cotización aceptada' };
+
+    await (supabase.from('quotation_items') as any).delete().eq('quotation_id', id);
+
+    const { error } = await (supabase.from('quotations') as any).delete().eq('id', id);
+    if (error) return { error: error.message };
+
+    revalidatePath('/cotizaciones');
     return { success: true };
 }
 

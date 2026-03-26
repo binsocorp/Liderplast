@@ -7,6 +7,7 @@ import { FileText, ExternalLink, CheckCircle, XCircle, ArrowLeft } from 'lucide-
 import { acceptQuotation, cancelQuotation } from '../actions';
 import type { QuotationWithRelations } from '@/lib/types/database';
 import { isQuotationExpired } from '@/lib/types/database';
+import { useToast } from '@/components/ui/Toast';
 
 const formatCurrency = (val: number) =>
     new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(val);
@@ -37,6 +38,7 @@ interface Props {
 
 export function CotizacionDetailClient({ quotation, convertedOrderNumber }: Props) {
     const router = useRouter();
+    const { addToast } = useToast();
     const [loadingAccept, setLoadingAccept] = useState(false);
     const [loadingCancel, setLoadingCancel] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -54,10 +56,26 @@ export function CotizacionDetailClient({ quotation, convertedOrderNumber }: Prop
         const result = await acceptQuotation(quotation.id);
         if (result.error) {
             setError(result.error);
+            addToast({
+                type: 'error',
+                title: 'Error al aceptar cotización',
+                message: result.error,
+            });
             setLoadingAccept(false);
             return;
         }
-        router.push(`/orders/${result.data!.orderId}`);
+        addToast({
+            type: 'success',
+            title: `Pedido ${result.data!.orderNumber || ''} creado exitosamente`,
+            message: `La cotización ${quotation.quotation_number} fue aceptada.`,
+            action: {
+                label: `Ver pedido ${result.data!.orderNumber || ''}`,
+                href: `/orders/${result.data!.orderId}`,
+            },
+            duration: 8000,
+        });
+        router.refresh();
+        setLoadingAccept(false);
     }
 
     async function handleCancel() {
@@ -93,14 +111,14 @@ export function CotizacionDetailClient({ quotation, convertedOrderNumber }: Prop
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <Link
-                        href={`/cotizaciones/${quotation.id}/pdf`}
-                        target="_blank"
+                    <a
+                        href={`/api/cotizaciones/${quotation.id}/pdf`}
+                        download={`COT-${quotation.quotation_number}.pdf`}
                         className="inline-flex items-center gap-2 h-9 px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-lg transition-colors"
                     >
                         <FileText className="w-4 h-4" />
-                        Ver PDF
-                    </Link>
+                        Descargar PDF
+                    </a>
                 </div>
             </div>
 

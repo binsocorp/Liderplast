@@ -177,6 +177,7 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
                             <tr className="bg-gray-50/50 border-b border-gray-100">
                                 <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider"># Orden</th>
                                 <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Fecha</th>
+                                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Cliente</th>
                                 <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider min-w-[150px]">
                                     <div className="flex flex-col gap-1">
                                         <span>Vendedor</span>
@@ -193,7 +194,6 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
                                     </div>
                                 </th>
                                 <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Casco</th>
-                                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Cant.</th>
                                 <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider min-w-[150px]">
                                     <div className="flex flex-col gap-1">
                                         <span>Provincia</span>
@@ -256,6 +256,11 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className="text-sm text-gray-900 font-medium truncate max-w-[140px] block">
+                                                    {order.client_name || <span className="text-gray-300">—</span>}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className="text-sm text-gray-700 font-bold uppercase truncate max-w-[120px] block">
                                                     {order.seller?.name || <span className="text-gray-300">S/A</span>}
                                                 </span>
@@ -265,11 +270,6 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
                                                     <p className="text-sm font-bold text-gray-900">{model}</p>
                                                     {color && <p className="text-[11px] text-gray-400">{color}</p>}
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-primary-50 text-primary-700 border border-primary-100">
-                                                    {order.order_items?.length || 0}
-                                                </span>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className="text-sm text-gray-600 font-medium">
@@ -313,9 +313,9 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
                                                         className="bg-indigo-50 border-indigo-100 text-indigo-700 hover:bg-indigo-100 font-bold"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            window.open(`/orders/${order.id}/remito`, '_blank');
+                                                            window.location.href = `/api/orders/${order.id}/pdf`;
                                                         }}
-                                                        title="Ver Remito"
+                                                        title="Descargar Remito PDF"
                                                     />
                                                     <Button
                                                         size="sm"
