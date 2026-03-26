@@ -4,6 +4,10 @@ import './globals.css';
 export const metadata: Metadata = {
     title: 'Liderplast — Sistema de Gestión',
     description: 'Sistema de gestión para fábrica de piletas de fibra',
+    robots: {
+        index: false,
+        follow: false,
+    },
 };
 
 export default function RootLayout({

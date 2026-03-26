@@ -4,6 +4,18 @@ import { HojaRutaClient } from './HojaRutaClient';
 
 export const dynamic = 'force-dynamic';
 
+import type { Metadata } from 'next';
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+    const { id } = await params;
+    const supabase = await createClient();
+    const { data } = await (supabase.from('trips') as any).select('trip_code').eq('id', id).single();
+    if (data?.trip_code) {
+        return { title: `Hoja_Ruta_${data.trip_code}` };
+    }
+    return { title: 'Hoja de Ruta' };
+}
+
 export default async function HojaRutaPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
     const supabase = await createClient();
