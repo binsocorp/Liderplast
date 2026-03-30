@@ -61,14 +61,32 @@ export async function updateTripStatus(tripId: string, status: string) {
         .update({ status })
     if (error) return { error: error.message };
 
-    // IF starting the trip, sync all orders to "EN_VIAJE"
+    // Sync order statuses based on trip status change
     if (status === 'EN_RUTA') {
         const { error: syncError } = await (supabase
             .from('orders') as any)
             .update({ status: 'EN_VIAJE' })
             .eq('trip_id', tripId);
 
-        if (syncError) console.error('Error syncing order statuses:', syncError);
+        if (syncError) console.error('Error syncing order statuses to EN_VIAJE:', syncError);
+    }
+
+    if (status === 'ENTREGADO') {
+        // Fetch all orders linked to this trip
+        const { data: linkedOrders } = await (supabase
+            .from('orders') as any)
+            .select('id, installer_id')
+            .eq('trip_id', tripId);
+
+        if (linkedOrders && linkedOrders.length > 0) {
+            for (const order of linkedOrders as any[]) {
+                const newStatus = order.installer_id ? 'ESPERANDO_INSTALACION' : 'COMPLETADO';
+                await (supabase.from('orders') as any)
+                    .update({ status: newStatus, updated_at: new Date().toISOString() })
+                    .eq('id', order.id);
+            }
+        }
+        revalidatePath('/orders');
     }
 
     revalidatePath(`/fletes/${tripId}`);

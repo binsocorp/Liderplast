@@ -243,7 +243,7 @@ export async function cancelQuotation(id: string) {
     const { error } = await (supabase
         .from('quotations') as any)
         .update({
-            status: 'CANCELADA',
+            status: 'RECHAZADA',
             updated_at: new Date().toISOString(),
         } as any)
         .eq('id', id);
@@ -265,12 +265,14 @@ export async function deleteQuotation(id: string) {
     if (!user) return { error: 'No autenticado' };
 
     const { data: quotation } = await (supabase.from('quotations') as any)
-        .select('status')
+        .select('converted_order_id')
         .eq('id', id)
         .single();
 
     if (!quotation) return { error: 'Cotización no encontrada' };
-    if (quotation.status === 'ACEPTADA') return { error: 'No se puede eliminar una cotización aceptada' };
+    if (quotation.converted_order_id) {
+        return { error: 'No se puede eliminar una cotización que ya fue convertida a pedido' };
+    }
 
     await (supabase.from('quotation_items') as any).delete().eq('quotation_id', id);
 

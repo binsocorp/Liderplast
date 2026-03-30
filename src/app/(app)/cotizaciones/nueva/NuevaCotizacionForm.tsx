@@ -215,7 +215,7 @@ export function NuevaCotizacionForm({
                 return;
             }
 
-            router.push(`/cotizaciones/${result.data.id}`);
+            router.push('/cotizaciones');
         } catch (err: any) {
             setError('Error inesperado: ' + (err.message || String(err)));
             setLoading(false);

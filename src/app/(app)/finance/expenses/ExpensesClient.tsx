@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Pencil, Trash2, DollarSign, FileText, TrendingDown, Clock } from 'lucide-react';
+import { Plus, Pencil, Trash2, DollarSign, FileText, TrendingDown, Clock, AlertTriangle } from 'lucide-react';
 import {
     PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend
 } from 'recharts';
@@ -52,6 +52,7 @@ export function ExpensesClient({
     const [categoryFilter, setCategoryFilter] = useState('');
     const [subcategoryFilter, setSubcategoryFilter] = useState('');
     const [paymentMethodFilter, setPaymentMethodFilter] = useState('');
+    const [onlyPending, setOnlyPending] = useState(false);
 
     // ── Filtered Data ──
     const filtered = useMemo(() => {
@@ -59,9 +60,10 @@ export function ExpensesClient({
         const dTo = new Date(dateTo);
         dTo.setHours(23, 59, 59);
 
-        return expenses.filter((e: any) => {
+        let result = expenses.filter((e: any) => {
             const d = new Date(e.issue_date);
             if (d < dFrom || d > dTo) return false;
+            if (onlyPending && e.status !== 'PENDIENTE') return false;
             if (statusFilter && e.status !== statusFilter) return false;
             if (categoryFilter && e.category_id !== categoryFilter) return false;
             if (subcategoryFilter && e.subcategory_id !== subcategoryFilter) return false;
@@ -72,7 +74,14 @@ export function ExpensesClient({
             }
             return true;
         });
-    }, [expenses, dateFrom, dateTo, search, statusFilter, categoryFilter, subcategoryFilter, paymentMethodFilter]);
+        // Sort by age (oldest first) when onlyPending is active
+        if (onlyPending) {
+            result = [...result].sort((a: any, b: any) =>
+                new Date(a.issue_date).getTime() - new Date(b.issue_date).getTime()
+            );
+        }
+        return result;
+    }, [expenses, dateFrom, dateTo, search, statusFilter, categoryFilter, subcategoryFilter, paymentMethodFilter, onlyPending]);
 
     // ── KPIs ──
     const stats = useMemo(() => {
@@ -167,6 +176,19 @@ export function ExpensesClient({
                         />
                     </div>
                 </div>
+
+                {/* Solo pendientes toggle */}
+                <button
+                    onClick={() => setOnlyPending(p => !p)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                        onlyPending
+                            ? 'bg-warning-500 text-white shadow-sm'
+                            : 'bg-gray-100 text-gray-600 hover:bg-warning-50 hover:text-warning-700'
+                    }`}
+                >
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    Solo pendientes
+                </button>
 
                 {/* Quick search */}
                 <div className="relative flex-1 min-w-[200px]">
@@ -283,10 +305,15 @@ export function ExpensesClient({
                                     </td>
                                 </tr>
                             ) : (
-                                filtered.map((r: any) => (
+                                filtered.map((r: any) => {
+                                    const daysPending = r.status === 'PENDIENTE'
+                                        ? Math.floor((Date.now() - new Date(r.issue_date).getTime()) / 86400000)
+                                        : 0;
+                                    const isOverdue = daysPending > 30;
+                                    return (
                                     <tr
                                         key={r.id}
-                                        className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+                                        className={`transition-colors cursor-pointer ${isOverdue ? 'bg-danger-50/40 hover:bg-danger-50/60' : 'hover:bg-gray-50/50'}`}
                                         onClick={() => { setEditingExpense(r); setShowModal(true); }}
                                     >
                                         <td className="px-4 py-3">
@@ -334,7 +361,8 @@ export function ExpensesClient({
                                             </div>
                                         </td>
                                     </tr>
-                                ))
+                                    );
+                                })
                             )}
                         </tbody>
                     </table>

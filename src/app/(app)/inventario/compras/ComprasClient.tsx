@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { FormSection, FormField, FormGrid } from '@/components/ui/FormSection';
 import { Input, Select, Textarea } from '@/components/ui/FormInputs';
-import { createPurchase } from './actions';
+import { createPurchase, linkPurchaseSupplier } from './actions';
 
 // -----------------------------------------------
 // Types
@@ -27,7 +27,9 @@ interface PurchaseItem {
 interface Purchase {
     id: string;
     purchase_number: string;
+    supplier_id: string | null;
     supplier_name: string;
+    supplier: { id: string; name: string } | null;
     purchase_date: string;
     voucher_type: string;
     voucher_number: string;
@@ -36,6 +38,12 @@ interface Purchase {
     status: string;
     created_at: string;
     purchase_items: PurchaseItem[];
+    linked_expense?: { id: string; status: string }[] | null;
+}
+
+interface Supplier {
+    id: string;
+    name: string;
 }
 
 interface InventoryItemLookup {
@@ -48,6 +56,7 @@ interface InventoryItemLookup {
 interface Props {
     purchases: Purchase[];
     items: InventoryItemLookup[];
+    suppliers: Supplier[];
 }
 
 interface LineItem {
@@ -66,11 +75,15 @@ const VOUCHER_OPTIONS = [
     { value: 'Otro', label: 'Otro' },
 ];
 
+function getSupplierLabel(p: Purchase): string {
+    return p.supplier?.name ?? p.supplier_name ?? '—';
+}
+
 // -----------------------------------------------
 // Component
 // -----------------------------------------------
 
-export function ComprasClient({ purchases, items }: Props) {
+export function ComprasClient({ purchases, items, suppliers }: Props) {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [dateFrom, setDateFrom] = useState('');
@@ -80,8 +93,15 @@ export function ComprasClient({ purchases, items }: Props) {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
 
+    // Link supplier modal (for historical records without FK)
+    const [linkModalPurchase, setLinkModalPurchase] = useState<Purchase | null>(null);
+    const [linkSupplierId, setLinkSupplierId] = useState('');
+    const [linkSaving, setLinkSaving] = useState(false);
+    const [linkError, setLinkError] = useState('');
+
     // New purchase form
     const [form, setForm] = useState({
+        supplier_id: '',
         supplier_name: '',
         purchase_date: new Date().toISOString().split('T')[0],
         voucher_type: '',
@@ -89,6 +109,9 @@ export function ComprasClient({ purchases, items }: Props) {
         notes: '',
     });
     const [lines, setLines] = useState<LineItem[]>([{ item_id: '', quantity: 1, unit_price: 0 }]);
+
+    // Purchases without supplier_id (historical)
+    const unlinked = purchases.filter(p => !p.supplier_id && p.status === 'CONFIRMADA');
 
     // Filter
     const filtered = purchases.filter((p) => {
@@ -98,7 +121,7 @@ export function ComprasClient({ purchases, items }: Props) {
         if (search) {
             const q = search.toLowerCase();
             return (
-                p.supplier_name?.toLowerCase().includes(q) ||
+                getSupplierLabel(p).toLowerCase().includes(q) ||
                 p.purchase_number?.toLowerCase().includes(q) ||
                 p.voucher_number?.toLowerCase().includes(q)
             );
@@ -106,11 +129,11 @@ export function ComprasClient({ purchases, items }: Props) {
         return true;
     });
 
-    // Supplier summary
+    // Supplier summary (by FK name, then fallback to supplier_name)
     const supplierTotals = purchases
         .filter(p => p.status === 'CONFIRMADA')
         .reduce((acc, p) => {
-            const name = p.supplier_name || 'Sin proveedor';
+            const name = getSupplierLabel(p);
             acc[name] = (acc[name] || 0) + Number(p.total);
             return acc;
         }, {} as Record<string, number>);
@@ -132,7 +155,6 @@ export function ComprasClient({ purchases, items }: Props) {
         setLines(prev => prev.map((line, i) => {
             if (i !== index) return line;
             const updated = { ...line, [field]: value };
-            // Auto-fill price from last_cost when selecting item
             if (field === 'item_id') {
                 const item = items.find(it => it.id === value);
                 if (item && item.last_cost > 0) {
@@ -148,6 +170,7 @@ export function ComprasClient({ purchases, items }: Props) {
 
     function openNew() {
         setForm({
+            supplier_id: '',
             supplier_name: '',
             purchase_date: new Date().toISOString().split('T')[0],
             voucher_type: '',
@@ -160,6 +183,10 @@ export function ComprasClient({ purchases, items }: Props) {
     }
 
     async function handleSave() {
+        if (!form.supplier_id) {
+            setError('Debe seleccionar un proveedor');
+            return;
+        }
         const validLines = lines.filter(l => l.item_id && l.quantity > 0);
         if (validLines.length === 0) {
             setError('Debe agregar al menos un ítem');
@@ -187,6 +214,24 @@ export function ComprasClient({ purchases, items }: Props) {
         }
     }
 
+    async function handleLinkSupplier() {
+        if (!linkSupplierId || !linkModalPurchase) return;
+        setLinkSaving(true);
+        setLinkError('');
+        try {
+            const result = await linkPurchaseSupplier(linkModalPurchase.id, linkSupplierId);
+            if (result.error) {
+                setLinkError(result.error);
+            } else {
+                setLinkModalPurchase(null);
+            }
+        } catch {
+            setLinkError('Error inesperado');
+        } finally {
+            setLinkSaving(false);
+        }
+    }
+
     // Columns
     const columns: Column<Purchase>[] = [
         {
@@ -209,7 +254,12 @@ export function ComprasClient({ purchases, items }: Props) {
             key: 'supplier_name',
             label: 'Proveedor',
             render: (row) => (
-                <span className="text-gray-900">{row.supplier_name || '—'}</span>
+                <span className="text-gray-900">
+                    {getSupplierLabel(row)}
+                    {!row.supplier_id && row.status === 'CONFIRMADA' && (
+                        <span className="ml-2 text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">sin FK</span>
+                    )}
+                </span>
             ),
         },
         {
@@ -242,6 +292,21 @@ export function ComprasClient({ purchases, items }: Props) {
             label: 'Estado',
             render: (row) => <Badge status={row.status} />,
         },
+        {
+            key: 'expense_status',
+            label: 'Gasto',
+            render: (row) => {
+                const expense = Array.isArray(row.linked_expense) ? row.linked_expense[0] : row.linked_expense;
+                if (!expense) return <span className="text-gray-400 text-xs">Sin registro</span>;
+                const cfg: Record<string, { label: string; cls: string }> = {
+                    PENDIENTE: { label: 'Pendiente', cls: 'bg-warning-50 text-warning-700' },
+                    PAGADO: { label: 'Pagado', cls: 'bg-success-50 text-success-700' },
+                    ANULADO: { label: 'Anulado', cls: 'bg-danger-50 text-danger-700' },
+                };
+                const c = cfg[expense.status] || { label: expense.status, cls: 'bg-gray-100 text-gray-600' };
+                return <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${c.cls}`}>{c.label}</span>;
+            },
+        },
     ];
 
     return (
@@ -260,6 +325,20 @@ export function ComprasClient({ purchases, items }: Props) {
                     </Button>
                 }
             />
+
+            {/* Alert: historical purchases without supplier FK */}
+            {unlinked.length > 0 && (
+                <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start justify-between gap-4">
+                    <div>
+                        <p className="text-sm font-bold text-amber-800">
+                            {unlinked.length} compra{unlinked.length > 1 ? 's' : ''} sin proveedor vinculado
+                        </p>
+                        <p className="text-xs text-amber-700 mt-0.5">
+                            Estas compras tienen nombre de proveedor pero no FK. Hacé click en una fila para vincular.
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* Supplier summary */}
             {sortedSuppliers.length > 0 && (
@@ -332,7 +411,15 @@ export function ComprasClient({ purchases, items }: Props) {
                         <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
                                 <span className="text-gray-400">Proveedor:</span>{' '}
-                                <span className="font-medium">{detailPurchase.supplier_name || '—'}</span>
+                                <span className="font-medium">{getSupplierLabel(detailPurchase)}</span>
+                                {!detailPurchase.supplier_id && detailPurchase.status === 'CONFIRMADA' && (
+                                    <button
+                                        onClick={() => { setDetailPurchase(null); setLinkSupplierId(''); setLinkError(''); setLinkModalPurchase(detailPurchase); }}
+                                        className="ml-2 text-xs text-amber-600 underline hover:text-amber-800"
+                                    >
+                                        Vincular proveedor
+                                    </button>
+                                )}
                             </div>
                             <div>
                                 <span className="text-gray-400">Fecha:</span>{' '}
@@ -388,6 +475,39 @@ export function ComprasClient({ purchases, items }: Props) {
                 )}
             </Modal>
 
+            {/* Link Supplier Modal (historical records) */}
+            <Modal
+                open={!!linkModalPurchase}
+                onClose={() => setLinkModalPurchase(null)}
+                title={`Vincular proveedor — ${linkModalPurchase?.purchase_number || ''}`}
+                size="sm"
+                footer={
+                    <>
+                        <Button variant="secondary" onClick={() => setLinkModalPurchase(null)}>Cancelar</Button>
+                        <Button onClick={handleLinkSupplier} disabled={linkSaving || !linkSupplierId}>
+                            {linkSaving ? 'Guardando...' : 'Vincular'}
+                        </Button>
+                    </>
+                }
+            >
+                <div className="space-y-3">
+                    <p className="text-sm text-gray-600">
+                        Nombre actual: <strong>{linkModalPurchase?.supplier_name || '—'}</strong>
+                    </p>
+                    {linkError && (
+                        <div className="p-3 bg-danger-50 border border-danger-200 rounded-lg text-sm text-danger-700">{linkError}</div>
+                    )}
+                    <FormField label="Proveedor" required>
+                        <Select
+                            value={linkSupplierId}
+                            onChange={(e) => setLinkSupplierId(e.target.value)}
+                            options={suppliers.map(s => ({ value: s.id, label: s.name }))}
+                            placeholder="Seleccionar proveedor..."
+                        />
+                    </FormField>
+                </div>
+            </Modal>
+
             {/* New Purchase Modal */}
             <Modal
                 open={modalOpen}
@@ -415,11 +535,16 @@ export function ComprasClient({ purchases, items }: Props) {
                     {/* Header */}
                     <FormSection title="Datos de la compra">
                         <FormGrid cols={2}>
-                            <FormField label="Proveedor">
-                                <Input
-                                    value={form.supplier_name}
-                                    onChange={(e) => setForm(f => ({ ...f, supplier_name: e.target.value }))}
-                                    placeholder="Nombre del proveedor"
+                            <FormField label="Proveedor" required>
+                                <Select
+                                    value={form.supplier_id}
+                                    onChange={(e) => {
+                                        const id = e.target.value;
+                                        const supplier = suppliers.find(s => s.id === id);
+                                        setForm(f => ({ ...f, supplier_id: id, supplier_name: supplier?.name || '' }));
+                                    }}
+                                    options={suppliers.map(s => ({ value: s.id, label: s.name }))}
+                                    placeholder="Seleccionar proveedor..."
                                 />
                             </FormField>
                             <FormField label="Fecha" required>
@@ -459,61 +584,58 @@ export function ComprasClient({ purchases, items }: Props) {
                     {/* Line items */}
                     <FormSection title="Ítems comprados">
                         <div className="space-y-3">
-                            {lines.map((line, idx) => {
-                                const itemInfo = items.find(i => i.id === line.item_id);
-                                return (
-                                    <div key={idx} className="flex items-end gap-3 p-3 bg-gray-50 rounded-lg">
-                                        <div className="flex-1 min-w-0">
-                                            <label className="block text-xs font-medium text-gray-500 mb-1">Ítem</label>
-                                            <Select
-                                                value={line.item_id}
-                                                onChange={(e) => updateLine(idx, 'item_id', e.target.value)}
-                                                options={items.map(i => ({ value: i.id, label: `${i.name} (${i.unit})` }))}
-                                                placeholder="Seleccionar..."
-                                                uiSize="sm"
-                                            />
-                                        </div>
-                                        <div className="w-24">
-                                            <label className="block text-xs font-medium text-gray-500 mb-1">Cantidad</label>
-                                            <Input
-                                                type="number"
-                                                value={line.quantity || ''}
-                                                onChange={(e) => updateLine(idx, 'quantity', Number(e.target.value))}
-                                                min={0.01}
-                                                step="0.01"
-                                                uiSize="sm"
-                                            />
-                                        </div>
-                                        <div className="w-32">
-                                            <label className="block text-xs font-medium text-gray-500 mb-1">P. Unitario</label>
-                                            <Input
-                                                type="number"
-                                                value={line.unit_price || ''}
-                                                onChange={(e) => updateLine(idx, 'unit_price', Number(e.target.value))}
-                                                min={0}
-                                                step="0.01"
-                                                uiSize="sm"
-                                            />
-                                        </div>
-                                        <div className="w-28 text-right">
-                                            <label className="block text-xs font-medium text-gray-500 mb-1">Subtotal</label>
-                                            <p className="text-sm font-semibold tabular-nums py-1">
-                                                ${lineTotal(line).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                                            </p>
-                                        </div>
-                                        {lines.length > 1 && (
-                                            <button
-                                                onClick={() => removeLine(idx)}
-                                                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-danger-50 text-gray-400 hover:text-danger-500 transition-colors mb-0.5"
-                                            >
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                </svg>
-                                            </button>
-                                        )}
+                            {lines.map((line, idx) => (
+                                <div key={idx} className="flex items-end gap-3 p-3 bg-gray-50 rounded-lg">
+                                    <div className="flex-1 min-w-0">
+                                        <label className="block text-xs font-medium text-gray-500 mb-1">Ítem</label>
+                                        <Select
+                                            value={line.item_id}
+                                            onChange={(e) => updateLine(idx, 'item_id', e.target.value)}
+                                            options={items.map(i => ({ value: i.id, label: `${i.name} (${i.unit})` }))}
+                                            placeholder="Seleccionar..."
+                                            uiSize="sm"
+                                        />
                                     </div>
-                                );
-                            })}
+                                    <div className="w-24">
+                                        <label className="block text-xs font-medium text-gray-500 mb-1">Cantidad</label>
+                                        <Input
+                                            type="number"
+                                            value={line.quantity || ''}
+                                            onChange={(e) => updateLine(idx, 'quantity', Number(e.target.value))}
+                                            min={0.01}
+                                            step="0.01"
+                                            uiSize="sm"
+                                        />
+                                    </div>
+                                    <div className="w-32">
+                                        <label className="block text-xs font-medium text-gray-500 mb-1">P. Unitario</label>
+                                        <Input
+                                            type="number"
+                                            value={line.unit_price || ''}
+                                            onChange={(e) => updateLine(idx, 'unit_price', Number(e.target.value))}
+                                            min={0}
+                                            step="0.01"
+                                            uiSize="sm"
+                                        />
+                                    </div>
+                                    <div className="w-28 text-right">
+                                        <label className="block text-xs font-medium text-gray-500 mb-1">Subtotal</label>
+                                        <p className="text-sm font-semibold tabular-nums py-1">
+                                            ${lineTotal(line).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                                        </p>
+                                    </div>
+                                    {lines.length > 1 && (
+                                        <button
+                                            onClick={() => removeLine(idx)}
+                                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-danger-50 text-gray-400 hover:text-danger-500 transition-colors mb-0.5"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
                         </div>
 
                         <div className="flex items-center justify-between mt-4">

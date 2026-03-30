@@ -80,6 +80,7 @@ const NAV_ITEMS = [
         subItems: [
             { label: 'Ingresos', href: '/finance/income' },
             { label: 'Egresos', href: '/finance/expenses' },
+            { label: 'Caja', href: '/finance/caja' },
         ]
     }
 ];
@@ -97,6 +98,7 @@ const ADMIN_ITEMS = [
             { label: 'Resumen Ejecutivo', href: '/dashboard/executive' },
             { label: 'Finanzas y Costos', href: '/dashboard/finance' },
             { label: 'Ventas y Clientes', href: '/dashboard/sales' },
+            { label: 'Finanzas (Caja)', href: '/dashboard/finanzas' },
         ]
     },
     {

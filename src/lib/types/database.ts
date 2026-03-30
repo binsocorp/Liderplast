@@ -379,7 +379,7 @@ export interface FinanceIncome {
 // Cotizaciones
 // -----------------------------------------------
 
-export type QuotationStatus = 'COTIZACION' | 'ACEPTADA' | 'CANCELADA';
+export type QuotationStatus = 'COTIZACION' | 'ACEPTADA' | 'RECHAZADA';
 // VENCIDA es derivado: status='COTIZACION' && expires_at < hoy
 
 export interface Quotation {

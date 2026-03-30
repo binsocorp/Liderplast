@@ -34,21 +34,44 @@ export default async function HojaRutaPage({ params }: { params: Promise<{ id: s
 
     if (!trip) notFound();
 
-    // Fetch orders already assigned to this trip via the synced trip_id column
+    // Fetch orders assigned to this trip with payment data
     const { data: assignedOrders } = await (supabase
         .from('orders') as any)
         .select(`
-            id, order_number, client_name, client_phone, client_document, delivery_address, city, notes,
+            id, order_number, client_name, client_phone, client_document,
+            delivery_address, city, notes,
+            total_net, paid_amount, payment_status,
             province:provinces(name),
             items:order_items(id, description, quantity)
         `)
         .eq('trip_id', id)
         .order('created_at', { ascending: true });
 
+    // Fetch incomes linked to these orders
+    const orderIds = (assignedOrders || []).map((o: any) => o.id);
+    let incomesByOrder: Record<string, any[]> = {};
+
+    if (orderIds.length > 0) {
+        const { data: incomes } = await supabase
+            .from('finance_incomes')
+            .select(`
+                order_id, amount, issue_date, income_type,
+                payment_method:finance_payment_methods(name)
+            `)
+            .in('order_id', orderIds)
+            .order('issue_date', { ascending: true });
+
+        (incomes || []).forEach((inc: any) => {
+            if (!incomesByOrder[inc.order_id]) incomesByOrder[inc.order_id] = [];
+            incomesByOrder[inc.order_id].push(inc);
+        });
+    }
+
     return (
         <HojaRutaClient
             trip={trip}
             orders={assignedOrders as any}
+            incomesByOrder={incomesByOrder}
         />
     );
 }

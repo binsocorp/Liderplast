@@ -3,13 +3,15 @@
 import { useState, useEffect } from 'react';
 import { X, Search } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { createIncome } from './actions';
+import { createIncome, updateIncome } from './actions';
 
 interface ModalProps {
     open: boolean;
     onClose: () => void;
     orders: any[];
     paymentMethods: any[];
+    /** Cuando se pasa, el modal trabaja en modo edición */
+    editingIncome?: any;
 }
 
 const INCOME_TYPES = [
@@ -19,7 +21,16 @@ const INCOME_TYPES = [
     { value: 'OTRO', label: 'Otro Ingreso' }
 ];
 
-export function NewIncomeModal({ open, onClose, orders, paymentMethods }: ModalProps) {
+const INVOICE_TYPES = [
+    { value: '', label: 'Sin comprobante' },
+    { value: 'FACTURA_A', label: 'Factura A' },
+    { value: 'FACTURA_B', label: 'Factura B' },
+    { value: 'FACTURA_C', label: 'Factura C' },
+    { value: 'RECIBO', label: 'Recibo' },
+];
+
+export function NewIncomeModal({ open, onClose, orders, paymentMethods, editingIncome }: ModalProps) {
+    const isEdit = !!editingIncome;
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
 
@@ -28,16 +39,47 @@ export function NewIncomeModal({ open, onClose, orders, paymentMethods }: ModalP
     const [orderId, setOrderId] = useState('');
     const [amount, setAmount] = useState('');
     const [paymentMethodId, setPaymentMethodId] = useState('');
+    const [invoiceType, setInvoiceType] = useState('');
     const [description, setDescription] = useState('');
     const [notes, setNotes] = useState('');
 
     const [orderSearch, setOrderSearch] = useState('');
 
+    // Populate form when editing
+    useEffect(() => {
+        if (editingIncome) {
+            setIssueDate(editingIncome.issue_date || new Date().toISOString().split('T')[0]);
+            setIncomeType(editingIncome.income_type || 'VENTA');
+            setOrderId(editingIncome.order_id || '');
+            setAmount(String(editingIncome.amount || ''));
+            setPaymentMethodId(editingIncome.payment_method_id || '');
+            setInvoiceType(editingIncome.invoice_type || '');
+            setDescription(editingIncome.description || '');
+            setNotes(editingIncome.notes || '');
+        } else {
+            setIssueDate(new Date().toISOString().split('T')[0]);
+            setIncomeType('VENTA');
+            setOrderId('');
+            setAmount('');
+            setPaymentMethodId('');
+            setInvoiceType('');
+            setDescription('');
+            setNotes('');
+        }
+        setError('');
+        setOrderSearch('');
+    }, [editingIncome, open]);
+
     const selectedOrder = orders.find(o => o.id === orderId);
-    const pendingAmount = selectedOrder ? Math.max(0, (Number(selectedOrder.total_net) || 0) - (Number(selectedOrder.paid_amount) || 0)) : 0;
+    const pendingAmount = selectedOrder
+        ? Math.max(0, (Number(selectedOrder.total_net) || 0) - (Number(selectedOrder.paid_amount) || 0))
+        : 0;
 
     const filteredOrders = orders.filter(o => {
         if (o.status === 'CANCELLED' || o.payment_status === 'COBRADA') return false;
+
+        // In edit mode, always include the currently linked order
+        if (isEdit && o.id === orderId) return true;
 
         const pendingValue = Math.max(0, (Number(o.total_net) || 0) - (Number(o.paid_amount) || 0));
         if (pendingValue <= 0) return false;
@@ -47,7 +89,7 @@ export function NewIncomeModal({ open, onClose, orders, paymentMethods }: ModalP
         return o.client_name?.toLowerCase().includes(q) || String(o.order_number).includes(q);
     });
 
-    // Reset when changing type
+    // Reset order when changing type
     useEffect(() => {
         if (incomeType !== 'VENTA') {
             setOrderId('');
@@ -68,16 +110,21 @@ export function NewIncomeModal({ open, onClose, orders, paymentMethods }: ModalP
             return;
         }
 
-        setSubmitting(true);
-        const res = await createIncome({
+        const formData = {
             issue_date: issueDate,
             income_type: incomeType,
             order_id: orderId,
             amount,
             payment_method_id: paymentMethodId,
+            invoice_type: invoiceType,
             description,
             notes
-        });
+        };
+
+        setSubmitting(true);
+        const res = isEdit
+            ? await updateIncome(editingIncome.id, formData)
+            : await createIncome(formData);
         setSubmitting(false);
 
         if (res.error) {
@@ -93,7 +140,9 @@ export function NewIncomeModal({ open, onClose, orders, paymentMethods }: ModalP
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                    <h2 className="text-xl font-bold text-gray-900">Registrar Ingreso</h2>
+                    <h2 className="text-xl font-bold text-gray-900">
+                        {isEdit ? 'Editar Ingreso' : 'Registrar Ingreso'}
+                    </h2>
                     <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
                         <X className="w-5 h-5" />
                     </button>
@@ -152,7 +201,7 @@ export function NewIncomeModal({ open, onClose, orders, paymentMethods }: ModalP
                                         </div>
                                         <div className="max-h-40 overflow-y-auto space-y-1">
                                             {filteredOrders.length === 0 ? (
-                                                <p className="text-xs text-gray-500 py-2 text-center">No hay ventas pendientes que coincidan con la búsqueda.</p>
+                                                <p className="text-xs text-gray-500 py-2 text-center">No hay ventas pendientes que coincidan.</p>
                                             ) : (
                                                 filteredOrders.map(o => (
                                                     <div
@@ -234,11 +283,24 @@ export function NewIncomeModal({ open, onClose, orders, paymentMethods }: ModalP
                                     className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-sm font-medium"
                                 >
                                     <option value="">Seleccionar...</option>
-                                    {paymentMethods.map(p => (
+                                    {paymentMethods.map((p: any) => (
                                         <option key={p.id} value={p.id}>{p.name}</option>
                                     ))}
                                 </select>
                             </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-semibold text-gray-700">Tipo de Comprobante</label>
+                            <select
+                                value={invoiceType}
+                                onChange={e => setInvoiceType(e.target.value)}
+                                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-sm font-medium"
+                            >
+                                {INVOICE_TYPES.map(t => (
+                                    <option key={t.value} value={t.value}>{t.label}</option>
+                                ))}
+                            </select>
                         </div>
 
                         <div className="space-y-1.5">
@@ -266,7 +328,9 @@ export function NewIncomeModal({ open, onClose, orders, paymentMethods }: ModalP
 
                 <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 mt-auto">
                     <Button variant="secondary" onClick={onClose} disabled={submitting}>Cancelar</Button>
-                    <Button form="income-form" type="submit" disabled={submitting}>{submitting ? 'Guardando...' : 'Guardar Ingreso'}</Button>
+                    <Button form="income-form" type="submit" disabled={submitting}>
+                        {submitting ? 'Guardando...' : isEdit ? 'Guardar Cambios' : 'Guardar Ingreso'}
+                    </Button>
                 </div>
             </div>
         </div>

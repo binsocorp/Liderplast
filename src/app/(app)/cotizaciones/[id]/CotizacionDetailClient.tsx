@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { FileText, ExternalLink, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
-import { acceptQuotation, cancelQuotation } from '../actions';
+import { FileText, ExternalLink, CheckCircle, XCircle, ArrowLeft, MessageCircle, Trash2 } from 'lucide-react';
+import { acceptQuotation, cancelQuotation, deleteQuotation } from '../actions';
 import type { QuotationWithRelations } from '@/lib/types/database';
 import { isQuotationExpired } from '@/lib/types/database';
 import { useToast } from '@/components/ui/Toast';
@@ -22,8 +22,8 @@ function StatusBadge({ quotation }: { quotation: QuotationWithRelations }) {
     if (quotation.status === 'ACEPTADA') {
         return <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 border border-green-200 rounded-full text-xs font-black uppercase tracking-wider">Aceptada</span>;
     }
-    if (quotation.status === 'CANCELADA') {
-        return <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 border border-red-200 rounded-full text-xs font-black uppercase tracking-wider">Cancelada</span>;
+    if (quotation.status === 'RECHAZADA') {
+        return <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 border border-red-200 rounded-full text-xs font-black uppercase tracking-wider">Rechazada</span>;
     }
     if (expired) {
         return <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-100 text-amber-700 border border-amber-200 rounded-full text-xs font-black uppercase tracking-wider">Vencida</span>;
@@ -41,8 +41,10 @@ export function CotizacionDetailClient({ quotation, convertedOrderNumber }: Prop
     const { addToast } = useToast();
     const [loadingAccept, setLoadingAccept] = useState(false);
     const [loadingCancel, setLoadingCancel] = useState(false);
+    const [loadingDelete, setLoadingDelete] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const isEditable = quotation.status === 'COTIZACION';
     const expired = isQuotationExpired(quotation);
@@ -91,6 +93,19 @@ export function CotizacionDetailClient({ quotation, convertedOrderNumber }: Prop
         router.refresh();
     }
 
+    async function handleDelete() {
+        setLoadingDelete(true);
+        setError(null);
+        const result = await deleteQuotation(quotation.id);
+        if ('error' in result) {
+            setError(result.error);
+            setLoadingDelete(false);
+            setShowDeleteConfirm(false);
+            return;
+        }
+        router.push('/cotizaciones');
+    }
+
     return (
         <div className="max-w-6xl mx-auto space-y-6">
             {/* Header */}
@@ -111,6 +126,19 @@ export function CotizacionDetailClient({ quotation, convertedOrderNumber }: Prop
                 </div>
 
                 <div className="flex items-center gap-2">
+                    {quotation.client_phone && (
+                        <a
+                            href={`https://wa.me/${quotation.client_phone.replace(/\D/g, '')}?text=${encodeURIComponent(
+                                `Hola ${quotation.client_name}, te enviamos la cotización *${quotation.quotation_number}* de Liderplast.\n\nTotal: *${new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(Number(quotation.total_net))}*\n\nPodés verla completa en PDF o contactarnos ante cualquier consulta.`
+                            )}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 h-9 px-3 bg-green-50 hover:bg-green-100 text-green-700 text-xs font-bold rounded-lg transition-colors border border-green-200"
+                        >
+                            <MessageCircle className="w-4 h-4" />
+                            Enviar por WhatsApp
+                        </a>
+                    )}
                     <a
                         href={`/api/cotizaciones/${quotation.id}/pdf`}
                         download={`COT-${quotation.quotation_number}.pdf`}
@@ -225,7 +253,7 @@ export function CotizacionDetailClient({ quotation, convertedOrderNumber }: Prop
                                 className="w-full h-10 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-black uppercase tracking-widest rounded-xl transition-colors flex items-center justify-center gap-2 border border-red-100"
                             >
                                 <XCircle className="w-4 h-4" />
-                                Cancelar Cotización
+                                Rechazar Cotización
                             </button>
                         </div>
                     )}
@@ -251,6 +279,39 @@ export function CotizacionDetailClient({ quotation, convertedOrderNumber }: Prop
                                 </button>
                             </div>
                         </div>
+                    )}
+
+                    {/* Eliminar cotización (solo si no tiene pedido vinculado) */}
+                    {!quotation.converted_order_id && (
+                        showDeleteConfirm ? (
+                            <div className="bg-red-50 border border-red-200 rounded-2xl p-5 space-y-3">
+                                <p className="text-sm font-bold text-red-700">¿Eliminar cotización?</p>
+                                <p className="text-xs text-red-600">Esta acción no se puede deshacer.</p>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={handleDelete}
+                                        disabled={loadingDelete}
+                                        className="flex-1 h-9 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-60"
+                                    >
+                                        {loadingDelete ? 'Eliminando...' : 'Confirmar'}
+                                    </button>
+                                    <button
+                                        onClick={() => setShowDeleteConfirm(false)}
+                                        className="flex-1 h-9 bg-white text-gray-700 border border-gray-200 text-xs font-bold rounded-lg hover:bg-gray-50 transition-colors"
+                                    >
+                                        Cancelar
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => setShowDeleteConfirm(true)}
+                                className="w-full h-10 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-black uppercase tracking-widest rounded-xl transition-colors flex items-center justify-center gap-2 border border-red-100"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                                Eliminar Cotización
+                            </button>
+                        )
                     )}
 
                     {/* Pedido generado (si ACEPTADA) */}

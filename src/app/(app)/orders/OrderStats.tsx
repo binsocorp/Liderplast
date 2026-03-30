@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { FileText, DollarSign, Clock, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FileText, DollarSign, Clock, CheckCircle, ChevronLeft, ChevronRight, Truck } from 'lucide-react';
 import type { Order } from '@/lib/types/database';
 
 interface OrderStatsProps {
@@ -36,9 +36,13 @@ export function OrderStats({ orders }: OrderStatsProps) {
     const totalVentasMes = monthOrders.reduce((sum, o) => sum + Number(o.total_net || 0), 0);
     const montoPendiente = monthOrders.reduce((sum, o) => sum + (Number(o.total_net || 0) - Number(o.paid_amount || 0)), 0);
 
+    // PED-01: monto total de pedidos con viaje asignado (trip_id no vacío)
+    const enViajePedidos = orders.filter((o: any) => !!o.trip_id);
+    const enViajeTotal = enViajePedidos.reduce((sum: number, o: any) => sum + Number(o.total_net || 0), 0);
+
     const stats = [
         {
-            label: 'Ventas del Mes',
+            label: 'Facturación Potencial',
             value: `$${totalVentasMes.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`,
             icon: <DollarSign className="w-6 h-6" />,
             iconBg: 'bg-primary-100',
@@ -64,6 +68,13 @@ export function OrderStats({ orders }: OrderStatsProps) {
             icon: <CheckCircle className="w-5 h-5" />,
             iconBg: 'bg-success-100',
             iconColor: 'text-success-600',
+        },
+        {
+            label: `En Viaje (${enViajePedidos.length})`,
+            value: `$${enViajeTotal.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`,
+            icon: <Truck className="w-5 h-5" />,
+            iconBg: 'bg-violet-100',
+            iconColor: 'text-violet-600',
         },
     ];
 
@@ -105,7 +116,7 @@ export function OrderStats({ orders }: OrderStatsProps) {
             </div>
 
             {/* Tarjetas */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 {stats.map((stat) => (
                     <div
                         key={stat.label}

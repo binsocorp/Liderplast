@@ -14,6 +14,34 @@ interface CreatePurchaseData {
     items: PurchaseItemFormData[];
 }
 
+// ─── Helper: Create linked expense for a purchase ───
+async function createLinkedExpense(supabase: any, purchase: {
+    id: string;
+    purchase_number: string;
+    purchase_date: string;
+    total: number;
+    supplier_name: string;
+}) {
+    // Look up the "Compras" category (fallback: null)
+    const { data: category } = await supabase
+        .from('finance_categories')
+        .select('id')
+        .ilike('name', '%compra%')
+        .limit(1)
+        .single();
+
+    await (supabase.from('finance_expenses') as any)
+        .insert({
+            issue_date: purchase.purchase_date,
+            amount: purchase.total,
+            description: `Compra ${purchase.purchase_number}${purchase.supplier_name ? ` — ${purchase.supplier_name}` : ''}`,
+            document_number: purchase.purchase_number,
+            category_id: category?.id ?? null,
+            status: 'PENDIENTE',
+            purchase_id: purchase.id,
+        } as any);
+}
+
 export async function createPurchase(data: CreatePurchaseData) {
     const parsedPurchase = purchaseSchema.safeParse(data.purchase);
     if (!parsedPurchase.success) {
@@ -43,7 +71,7 @@ export async function createPurchase(data: CreatePurchaseData) {
             ...parsedPurchase.data,
             created_by: user.id,
         } as any)
-        .select('id, purchase_number')
+        .select('id, purchase_number, purchase_date, total, supplier_name')
         .single();
 
     if (purchaseError) return { error: purchaseError.message };
@@ -64,10 +92,54 @@ export async function createPurchase(data: CreatePurchaseData) {
         }
     }
 
+    // 3. CMP-01: Auto-create linked expense (PENDIENTE)
+    if (parsedPurchase.data.status === 'CONFIRMADA' || !parsedPurchase.data.status) {
+        // Fetch fresh total (calculated by DB trigger/default)
+        const { data: freshPurchase } = await (supabase
+            .from('purchases') as any)
+            .select('total, supplier_name')
+            .eq('id', purchase.id)
+            .single();
+
+        await createLinkedExpense(supabase, {
+            id: purchase.id,
+            purchase_number: purchase.purchase_number,
+            purchase_date: parsedPurchase.data.purchase_date,
+            total: freshPurchase?.total ?? 0,
+            supplier_name: freshPurchase?.supplier_name ?? parsedPurchase.data.supplier_name ?? '',
+        });
+    }
+
     revalidatePath('/inventario');
     revalidatePath('/inventario/compras');
     revalidatePath('/inventario/movimientos');
+    revalidatePath('/finance/expenses');
     return { data: purchase };
+}
+
+export async function linkPurchaseSupplier(purchaseId: string, supplierId: string) {
+    const supabase = await createClient();
+
+    // Also update supplier_name from the suppliers table for consistency
+    const { data: supplier } = await (supabase
+        .from('suppliers') as any)
+        .select('name')
+        .eq('id', supplierId)
+        .single();
+
+    const { error } = await (supabase
+        .from('purchases') as any)
+        .update({
+            supplier_id: supplierId,
+            supplier_name: supplier?.name ?? '',
+            updated_at: new Date().toISOString(),
+        } as any)
+        .eq('id', purchaseId);
+
+    if (error) return { error: error.message };
+
+    revalidatePath('/inventario/compras');
+    return { success: true };
 }
 
 export async function deletePurchase(id: string) {
@@ -81,6 +153,21 @@ export async function deletePurchase(id: string) {
 
     if (error) return { error: error.message };
 
+    // CMP-04: Annul linked expense (if PENDIENTE)
+    const { data: linkedExpense } = await (supabase
+        .from('finance_expenses') as any)
+        .select('id, status')
+        .eq('purchase_id', id)
+        .single();
+
+    if (linkedExpense) {
+        await (supabase
+            .from('finance_expenses') as any)
+            .update({ status: 'ANULADO' } as any)
+            .eq('id', linkedExpense.id);
+    }
+
     revalidatePath('/inventario/compras');
+    revalidatePath('/finance/expenses');
     return { success: true };
 }

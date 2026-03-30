@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Pencil, Trash2, Map } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { DataTable, Column } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
@@ -10,6 +11,7 @@ import { Modal } from '@/components/ui/Modal';
 import { FormField, FormGrid } from '@/components/ui/FormSection';
 import { Input, Textarea, Select } from '@/components/ui/FormInputs';
 import { createTrip, updateTrip, deleteTrip } from './actions';
+import { assignOrderToTrip, removeOrderFromTrip, updateTripStatus } from './[id]/actions';
 import type { Trip, Driver, Vehicle, Province, TripOrder } from '@/lib/types/database';
 
 interface ExtendedTrip extends Trip {
@@ -60,7 +62,7 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
     const [tripDate, setTripDate] = useState('');
     const [driverId, setDriverId] = useState('');
     const [vehicleId, setVehicleId] = useState('');
-    const [cost, setCost] = useState(0); // Costo Presupuestado
+    const [cost, setCost] = useState(0);
     const [actualCost, setActualCost] = useState(0);
     const [description, setDescription] = useState('');
     const [notes, setNotes] = useState('');
@@ -82,18 +84,28 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
         const totalTrips = filteredTrips.length;
         const totalBudgeted = filteredTrips.reduce((acc, t) => acc + (Number(t.cost) || 0), 0);
         const totalActual = filteredTrips.reduce((acc, t) => acc + (Number((t as any).actual_cost) || 0), 0);
-        return {
-            totalTrips,
-            totalBudgeted,
-            totalActual,
-            profit: totalBudgeted - totalActual
-        };
+        return { totalTrips, totalBudgeted, totalActual, profit: totalBudgeted - totalActual };
     }, [filteredTrips]);
 
-    // Filtered available orders by search (removing province filter as requested)
+    // Edit mode computed values
+    const editingTrip = useMemo(
+        () => editingTripId ? trips.find(t => t.id === editingTripId) || null : null,
+        [editingTripId, trips]
+    );
+    const editingTripOrders = useMemo(
+        () => editingTripId ? tripOrders.filter(to => to.trip_id === editingTripId) : [],
+        [editingTripId, tripOrders]
+    );
+    const editingTripIsFull = useMemo(() => {
+        const cap = editingTrip?.vehicle?.capacity || 0;
+        return cap > 0 && editingTripOrders.length >= cap;
+    }, [editingTrip, editingTripOrders]);
+
+    // Filtered available orders by search
     const filteredAvailable = useMemo(() => {
         return availableOrders.filter(o => {
-            const matchSearch = (o.order_number?.toLowerCase() || '').includes(orderSearch.toLowerCase()) ||
+            const matchSearch =
+                (o.order_number?.toLowerCase() || '').includes(orderSearch.toLowerCase()) ||
                 (o.client_name?.toLowerCase() || '').includes(orderSearch.toLowerCase());
             return matchSearch && !selectedOrderIds.includes(o.id);
         });
@@ -108,7 +120,6 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
         return selectedOrders.reduce((acc, o) => acc + (Number(o.freight_amount) || 0), 0);
     }, [selectedOrders]);
 
-    // Sync calculated cost to state when selections change
     useEffect(() => {
         setCost(totalBudgetedCost);
     }, [totalBudgetedCost]);
@@ -128,12 +139,11 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
                 description,
                 notes,
                 status: editingTripId ? undefined : 'PLANIFICADO',
-                order_ids: editingTripId ? undefined : selectedOrderIds, // Order management in edit should be on the detail page or handled carefully
+                order_ids: editingTripId ? undefined : selectedOrderIds,
             };
 
             let result;
             if (editingTripId) {
-                // Remove undefined fields for update
                 const updateData = Object.fromEntries(Object.entries(formData).filter(([_, v]) => v !== undefined));
                 result = await updateTrip(editingTripId, updateData as any);
             } else {
@@ -166,9 +176,9 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
         setActualCost(Number((trip as any).actual_cost) || 0);
         setDescription(trip.description || '');
         setNotes(trip.notes || '');
-        // For editing, we already have orders in detail page, but we can't easily sync them in this modal list right now
-        // So we keep order_ids empty for edit, updateTrip in actions doesn't touch them anyway
         setSelectedOrderIds([]);
+        setOrderSearch('');
+        setError(null);
         setShowModal(true);
     }
 
@@ -185,10 +195,11 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
         setNotes('');
         setSelectedOrderIds([]);
         setOrderSearch('');
+        setError(null);
     }
 
     async function handleDelete(id: string) {
-        if (!confirm('¿Está seguro de que desea eliminar este flete? Los pedidos asociados volverán a estar disponibles.')) return;
+        if (!confirm('¿Eliminar este flete? Los pedidos asociados volverán a estar disponibles.')) return;
         setLoading(true);
         try {
             await deleteTrip(id);
@@ -198,6 +209,32 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
         } finally {
             setLoading(false);
         }
+    }
+
+    async function handleAssign(orderId: string) {
+        if (!editingTripId) return;
+        setError(null);
+        const result = await assignOrderToTrip(orderId, editingTripId);
+        if (result.error) setError(result.error);
+        else router.refresh();
+    }
+
+    async function handleRemove(orderId: string) {
+        if (!editingTripId) return;
+        setError(null);
+        const result = await removeOrderFromTrip(orderId, editingTripId);
+        if (result.error) setError(result.error);
+        else router.refresh();
+    }
+
+    async function handleStatusChange(newStatus: string) {
+        if (!editingTripId) return;
+        setError(null);
+        setLoading(true);
+        const result = await updateTripStatus(editingTripId, newStatus);
+        setLoading(false);
+        if (result.error) setError(result.error);
+        else router.refresh();
     }
 
     function toggleOrder(orderId: string) {
@@ -271,32 +308,32 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
             key: '_actions',
             label: '',
             render: (row) => (
-                <div className="flex gap-2 justify-end">
-                    <Button size="sm" variant="ghost" className="h-8 px-2 text-indigo-900 border-indigo-100 hover:bg-indigo-50" onClick={() => window.open(`/fletes/${row.id}/hoja-ruta`, '_blank')}>
-                        PDF
-                    </Button>
-                    <Button size="sm" variant="secondary" className="h-8" onClick={() => handleEdit(row)}>
-                        Editar
-                    </Button>
-                    <Button size="sm" variant="primary" className="h-8" onClick={() => router.push(`/fletes/${row.id}`)}>
-                        Gestionar
-                    </Button>
-                    <Button size="sm" variant="danger" className="h-8" onClick={() => handleDelete(row.id)}>
-                        Borrar
-                    </Button>
+                <div className="flex items-center gap-1 justify-end">
+                    <button
+                        title="Descargar hoja de ruta"
+                        onClick={() => window.open(`/fletes/${row.id}/hoja-ruta`, '_blank')}
+                        className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                    >
+                        <Map className="w-4 h-4" />
+                    </button>
+                    <button
+                        title="Editar / Gestionar flete"
+                        onClick={() => handleEdit(row)}
+                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    >
+                        <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                        title="Eliminar flete"
+                        onClick={() => handleDelete(row.id)}
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
                 </div>
             ),
         },
     ];
-
-    const formatExtra = (order: any) => {
-        const item = order.order_items?.[0];
-        if (!item) return null;
-        const colorMatch = item.description?.match(/\(Color:\s*(.*?)\)/);
-        const model = item.description?.split(' ')[0] || '';
-        const color = colorMatch ? colorMatch[1] : '';
-        return { model, color };
-    };
 
     return (
         <>
@@ -371,14 +408,16 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
 
             <Modal
                 open={showModal}
-                onClose={() => setShowModal(false)}
-                title={editingTripId ? "Editar Flete" : "Nuevo Flete"}
+                onClose={() => { setShowModal(false); resetForm(); }}
+                title={editingTripId ? `Editar / Gestionar — ${editingTrip?.trip_code || ''}` : 'Nuevo Flete'}
                 size="xl"
                 footer={
                     <>
-                        <Button variant="secondary" onClick={() => setShowModal(false)} disabled={loading}>Cancelar</Button>
+                        <Button variant="secondary" onClick={() => { setShowModal(false); resetForm(); }} disabled={loading}>
+                            Cerrar
+                        </Button>
                         <Button onClick={handleSave} disabled={loading || (!editingTripId && selectedOrderIds.length === 0)}>
-                            {loading ? 'Guardando...' : editingTripId ? 'Guardar Cambios' : 'Crear Flete'}
+                            {loading ? 'Guardando...' : editingTripId ? 'Guardar Datos del Flete' : 'Crear Flete'}
                         </Button>
                     </>
                 }
@@ -391,7 +430,7 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
                     )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Datos del Viaje */}
+                        {/* ── Columna izquierda: Datos del Viaje ── */}
                         <div className="space-y-4">
                             <h3 className="text-sm font-bold text-gray-900 border-b pb-2 uppercase tracking-wider">Datos del Viaje</h3>
                             <FormGrid cols={1}>
@@ -435,7 +474,7 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
                                 )}
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormField label="Costo Presup. ($)">
-                                        <Input type="number" value={cost} onChange={(e) => setCost(Number(e.target.value))} min={0} className="bg-gray-50 font-bold text-primary-700" title="Calculado automáticamente por los pedidos seleccionados" />
+                                        <Input type="number" value={cost} onChange={(e) => setCost(Number(e.target.value))} min={0} className="bg-gray-50 font-bold text-primary-700" />
                                     </FormField>
                                     <FormField label="Costo Real ($)">
                                         <Input type="number" value={actualCost} onChange={(e) => setActualCost(Number(e.target.value))} min={0} />
@@ -450,8 +489,9 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
                             </FormGrid>
                         </div>
 
-                        {/* Pedidos Incluidos (Solo en creación) */}
+                        {/* ── Columna derecha: Pedidos ── */}
                         {!editingTripId ? (
+                            /* CREACIÓN: selector de pedidos */
                             <div className="space-y-4">
                                 <h3 className="text-sm font-bold text-gray-900 border-b pb-2 uppercase tracking-wider flex justify-between">
                                     Pedidos del Viaje
@@ -459,8 +499,6 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
                                         {selectedOrderIds.length} seleccionados
                                     </span>
                                 </h3>
-
-                                {/* Buscador de pedidos */}
                                 <div className="relative">
                                     <Input
                                         className="pl-9"
@@ -472,9 +510,7 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                     </svg>
                                 </div>
-
                                 <div className="border rounded-lg overflow-hidden flex flex-col h-[400px]">
-                                    {/* Lista de pedidos disponibles */}
                                     <div className="flex-1 overflow-y-auto p-2 bg-gray-50 border-b">
                                         <p className="text-[10px] font-bold text-gray-400 uppercase mb-2 px-1">Disponibles</p>
                                         {filteredAvailable.length === 0 ? (
@@ -494,16 +530,12 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
                                                             </div>
                                                             <p className="text-gray-600 truncate">{order.client_name}</p>
                                                         </div>
-                                                        <div className="text-right">
-                                                            <p className="font-bold text-gray-900">${(order.freight_amount || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</p>
-                                                        </div>
+                                                        <p className="font-bold text-gray-900">${(order.freight_amount || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</p>
                                                     </div>
                                                 ))}
                                             </div>
                                         )}
                                     </div>
-
-                                    {/* Lista de seleccionados */}
                                     <div className="h-1/3 overflow-y-auto p-2 bg-white">
                                         <p className="text-[10px] font-bold text-primary-400 uppercase mb-2 px-1">Seleccionados ({selectedOrderIds.length})</p>
                                         {selectedOrders.length === 0 ? (
@@ -511,10 +543,7 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
                                         ) : (
                                             <div className="space-y-1">
                                                 {selectedOrders.map(order => (
-                                                    <div
-                                                        key={order.id}
-                                                        className="flex items-center justify-between p-1.5 rounded bg-primary-50 border border-primary-200 text-xs"
-                                                    >
+                                                    <div key={order.id} className="flex items-center justify-between p-1.5 rounded bg-primary-50 border border-primary-200 text-xs">
                                                         <div>
                                                             <span className="font-bold text-primary-800">#{order.order_number}</span>
                                                             <span className="ml-2 text-primary-600 truncate">{order.client_name}</span>
@@ -532,21 +561,115 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
                                 </div>
                             </div>
                         ) : (
-                            <div className="flex flex-col items-center justify-center p-8 bg-gray-50 border border-gray-200 border-dashed rounded-xl h-full space-y-3">
-                                <div className="p-3 bg-indigo-50 rounded-full">
-                                    <svg className="w-8 h-8 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                                    </svg>
+                            /* EDICIÓN: gestión del viaje */
+                            <div className="space-y-4">
+                                {/* Estado y acciones */}
+                                <div className="flex items-center justify-between border-b pb-2">
+                                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Gestionar Viaje</h3>
+                                    <Badge status={editingTrip?.status} />
                                 </div>
-                                <div className="text-center">
-                                    <p className="text-sm font-bold text-indigo-950">Gestión de Pedidos</p>
-                                    <p className="text-xs text-gray-500 max-w-[200px] mt-1">
-                                        Para sumar o quitar pedidos de este viaje, utiliza el botón <span className="font-black text-primary-600">"Gestionar"</span> en la lista principal.
-                                    </p>
+
+                                {editingTrip?.status === 'PLANIFICADO' && (
+                                    <Button
+                                        size="sm"
+                                        onClick={() => handleStatusChange('EN_RUTA')}
+                                        disabled={loading}
+                                        className="w-full"
+                                    >
+                                        Iniciar Viaje
+                                    </Button>
+                                )}
+                                {editingTrip?.status === 'EN_RUTA' && (
+                                    <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        onClick={() => handleStatusChange('ENTREGADO')}
+                                        disabled={loading}
+                                        className="w-full"
+                                    >
+                                        Marcar como Entregado
+                                    </Button>
+                                )}
+
+                                {/* Pedidos cargados */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                            Pedidos Cargados
+                                        </p>
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${editingTripIsFull ? 'bg-danger-100 text-danger-700' : 'bg-primary-100 text-primary-700'}`}>
+                                            {editingTripOrders.length}
+                                            {editingTrip?.vehicle?.capacity ? ` / ${editingTrip.vehicle.capacity}` : ''}
+                                        </span>
+                                    </div>
+                                    <div className="space-y-1 max-h-[160px] overflow-y-auto">
+                                        {editingTripOrders.length === 0 ? (
+                                            <p className="text-xs text-gray-400 text-center py-3">Sin pedidos asignados</p>
+                                        ) : (
+                                            editingTripOrders.map(to => (
+                                                <div key={to.id} className="flex items-center justify-between p-2 bg-primary-50 border border-primary-100 rounded text-xs">
+                                                    <div>
+                                                        <span className="font-bold text-primary-800">#{to.order?.order_number}</span>
+                                                        <span className="ml-2 text-gray-600">{to.order?.client_name}</span>
+                                                    </div>
+                                                    {editingTrip?.status !== 'ENTREGADO' && (
+                                                        <button
+                                                            onClick={() => handleRemove(to.order?.id ?? '')}
+                                                            className="p-0.5 text-danger-400 hover:text-danger-600 hover:bg-danger-50 rounded transition-colors"
+                                                            title="Quitar pedido"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
                                 </div>
-                                <Button size="sm" variant="secondary" onClick={() => { setShowModal(false); router.push(`/fletes/${editingTripId}`); }}>
-                                    Ir a Gestionar Pedidos
-                                </Button>
+
+                                {/* Agregar pedidos (solo si no está entregado) */}
+                                {editingTrip?.status !== 'ENTREGADO' && (
+                                    <div>
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                                            Agregar Pedidos
+                                        </p>
+                                        <div className="relative mb-2">
+                                            <Input
+                                                className="pl-9 text-xs"
+                                                placeholder="Buscar por nº o cliente..."
+                                                value={orderSearch}
+                                                onChange={(e) => setOrderSearch(e.target.value)}
+                                            />
+                                            <svg className="w-4 h-4 absolute left-3 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                            </svg>
+                                        </div>
+                                        <div className="space-y-1 max-h-[200px] overflow-y-auto border rounded-lg p-2 bg-gray-50">
+                                            {filteredAvailable.length === 0 ? (
+                                                <p className="text-xs text-center text-gray-400 py-3 italic">No hay pedidos disponibles</p>
+                                            ) : (
+                                                filteredAvailable.map(order => (
+                                                    <div key={order.id} className="flex items-center justify-between p-2 bg-white border rounded text-xs hover:border-primary-200 transition-colors">
+                                                        <div>
+                                                            <span className="font-bold text-primary-700">#{order.order_number}</span>
+                                                            <span className="ml-2 text-gray-600 truncate">{order.client_name}</span>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => handleAssign(order.id)}
+                                                            disabled={editingTripIsFull}
+                                                            className="text-xs font-bold text-primary-600 hover:text-primary-800 disabled:opacity-40 disabled:cursor-not-allowed px-2 py-0.5 bg-primary-50 hover:bg-primary-100 rounded transition-colors"
+                                                        >
+                                                            + Agregar
+                                                        </button>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                        {editingTripIsFull && (
+                                            <p className="text-[10px] text-danger-600 font-bold mt-1">Vehículo al máximo de capacidad.</p>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

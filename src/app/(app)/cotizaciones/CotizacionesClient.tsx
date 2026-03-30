@@ -11,7 +11,7 @@ import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
 import { acceptQuotation, deleteQuotation } from './actions';
 import { useToast } from '@/components/ui/Toast';
 
-type StatusFilter = 'TODAS' | 'ACTIVAS' | 'ACEPTADAS' | 'CANCELADAS' | 'VENCIDAS';
+type StatusFilter = 'TODAS' | 'ACTIVAS' | 'ACEPTADAS' | 'RECHAZADAS' | 'VENCIDAS';
 
 const formatCurrency = (val: number) =>
     new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(val);
@@ -21,9 +21,9 @@ const formatDate = (dateStr: string | null) => {
     return new Date(dateStr + 'T00:00:00').toLocaleDateString('es-AR');
 };
 
-function getEffectiveStatus(q: QuotationWithRelations): 'ACTIVA' | 'VENCIDA' | 'ACEPTADA' | 'CANCELADA' {
+function getEffectiveStatus(q: QuotationWithRelations): 'ACTIVA' | 'VENCIDA' | 'ACEPTADA' | 'RECHAZADA' {
     if (q.status === 'ACEPTADA') return 'ACEPTADA';
-    if (q.status === 'CANCELADA') return 'CANCELADA';
+    if (q.status === 'RECHAZADA') return 'RECHAZADA';
     if (isQuotationExpired(q)) return 'VENCIDA';
     return 'ACTIVA';
 }
@@ -34,7 +34,7 @@ function StatusBadge({ quotation }: { quotation: QuotationWithRelations }) {
         ACTIVA: { label: 'Activa', className: 'bg-blue-100 text-blue-700 border-blue-200' },
         VENCIDA: { label: 'Vencida', className: 'bg-amber-100 text-amber-700 border-amber-200' },
         ACEPTADA: { label: 'Aceptada', className: 'bg-green-100 text-green-700 border-green-200' },
-        CANCELADA: { label: 'Cancelada', className: 'bg-red-100 text-red-700 border-red-200' },
+        RECHAZADA: { label: 'Rechazada', className: 'bg-red-100 text-red-700 border-red-200' },
     };
     const { label, className } = cfg[eff];
     return (
@@ -101,7 +101,7 @@ export function CotizacionesClient({
         { key: 'TODAS', label: 'Todas' },
         { key: 'ACTIVAS', label: 'Activas' },
         { key: 'ACEPTADAS', label: 'Aceptadas' },
-        { key: 'CANCELADAS', label: 'Canceladas' },
+        { key: 'RECHAZADAS', label: 'Rechazadas' },
         { key: 'VENCIDAS', label: 'Vencidas' },
     ];
 
@@ -138,7 +138,7 @@ export function CotizacionesClient({
             const eff = getEffectiveStatus(q);
             if (statusFilter === 'ACTIVAS' && eff !== 'ACTIVA') return false;
             if (statusFilter === 'ACEPTADAS' && eff !== 'ACEPTADA') return false;
-            if (statusFilter === 'CANCELADAS' && eff !== 'CANCELADA') return false;
+            if (statusFilter === 'RECHAZADAS' && eff !== 'RECHAZADA') return false;
             if (statusFilter === 'VENCIDAS' && eff !== 'VENCIDA') return false;
 
             return true;
@@ -147,12 +147,12 @@ export function CotizacionesClient({
 
     // Contadores por estado y KPIs
     const counts = useMemo(() => {
-        const c = { ACTIVAS: 0, ACEPTADAS: 0, CANCELADAS: 0, VENCIDAS: 0 };
+        const c = { ACTIVAS: 0, ACEPTADAS: 0, RECHAZADAS: 0, VENCIDAS: 0 };
         baseFiltered.forEach(q => {
             const eff = getEffectiveStatus(q);
             if (eff === 'ACTIVA') c.ACTIVAS++;
             if (eff === 'ACEPTADA') c.ACEPTADAS++;
-            if (eff === 'CANCELADA') c.CANCELADAS++;
+            if (eff === 'RECHAZADA') c.RECHAZADAS++;
             if (eff === 'VENCIDA') c.VENCIDAS++;
         });
         return c;
@@ -412,7 +412,7 @@ export function CotizacionesClient({
                                                         <Check className="w-4 h-4" />
                                                     </button>
                                                 )}
-                                                {q.status !== 'ACEPTADA' && (
+                                                {(q.status !== 'ACEPTADA' || !q.converted_order_id) && (
                                                     confirmDeleteId === q.id ? (
                                                         <div className="flex items-center gap-1">
                                                             <button

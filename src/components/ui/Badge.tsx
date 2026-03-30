@@ -11,6 +11,7 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; d
 
     // Estado de pago
     PENDING: { label: 'Pendiente', bg: 'bg-warning-50', text: 'text-warning-600', dot: 'bg-warning-500' },
+    PARTIAL: { label: 'Parcial', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500' },
     PAID: { label: 'Pagado', bg: 'bg-success-50', text: 'text-success-600', dot: 'bg-success-500' },
     UNPAID: { label: 'Impago', bg: 'bg-danger-50', text: 'text-danger-600', dot: 'bg-danger-500' },
     REFUNDED: { label: 'Reembolsado', bg: 'bg-sky-50', text: 'text-sky-600', dot: 'bg-sky-500' },
@@ -37,9 +38,15 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; d
     STOCK_OK: { label: 'OK', bg: 'bg-success-50', text: 'text-success-700', dot: 'bg-success-500' },
     STOCK_BAJO: { label: 'Bajo', bg: 'bg-danger-50', text: 'text-danger-700', dot: 'bg-danger-500' },
 
+    // Cotizaciones
+    COTIZACION: { label: 'Activa', bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500' },
+    ACEPTADA: { label: 'Aceptada', bg: 'bg-success-50', text: 'text-success-700', dot: 'bg-success-500' },
+    RECHAZADA: { label: 'Rechazada', bg: 'bg-danger-50', text: 'text-danger-700', dot: 'bg-danger-500' },
+
     // Compras
     CONFIRMADA: { label: 'Confirmada', bg: 'bg-success-50', text: 'text-success-700', dot: 'bg-success-500' },
     ANULADA: { label: 'Anulada', bg: 'bg-danger-50', text: 'text-danger-700', dot: 'bg-danger-500' },
+    ANULADO: { label: 'Anulado', bg: 'bg-danger-50', text: 'text-danger-700', dot: 'bg-danger-500' },
 
     // Uso general
     ACTIVE: { label: 'Activo', bg: 'bg-success-50', text: 'text-success-700' },

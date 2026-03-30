@@ -62,19 +62,23 @@ export async function createIncome(formData: any) {
         }
 
         // 1. Insert income
+        const insertPayload: any = {
+            issue_date: formData.issue_date,
+            amount,
+            income_type: formData.income_type,
+            order_id: isVenta ? formData.order_id : null,
+            payment_method_id: formData.payment_method_id || null,
+            description: formData.description || null,
+            notes: formData.notes || null,
+            currency: 'ARS',
+            created_by_user_id: user.id,
+        };
+        // invoice_type: solo incluir si tiene valor (columna agregada en Phase 13)
+        if (formData.invoice_type) insertPayload.invoice_type = formData.invoice_type;
+
         const { error: insertError } = await (supabase
             .from('finance_incomes') as any)
-            .insert({
-                issue_date: formData.issue_date,
-                amount,
-                income_type: formData.income_type,
-                order_id: isVenta ? formData.order_id : null,
-                payment_method_id: formData.payment_method_id || null,
-                description: formData.description || null,
-                notes: formData.notes || null,
-                currency: 'ARS',
-                created_by_user_id: user.id
-            } as any);
+            .insert(insertPayload);
 
         if (insertError) return { error: insertError.message };
 
@@ -93,6 +97,62 @@ export async function createIncome(formData: any) {
     } catch (e: any) {
         return { error: e.message || 'Error inesperado' };
     }
+}
+
+// ─── Update Income ───
+
+export async function updateIncome(id: string, formData: any) {
+    const supabase = await createClient();
+
+    // 1. Get current income to check if order changed
+    const { data: current, error: fetchError } = await (supabase
+        .from('finance_incomes') as any)
+        .select('*')
+        .eq('id', id)
+        .single();
+
+    if (fetchError || !current) return { error: 'Ingreso no encontrado' };
+
+    const amount = Number(formData.amount);
+    if (isNaN(amount) || amount <= 0) return { error: 'Monto inválido' };
+
+    const isVenta = formData.income_type === 'VENTA';
+    if (isVenta && !formData.order_id) return { error: 'Debes seleccionar una venta' };
+
+    // 2. Update income
+    const updatePayload: any = {
+        issue_date: formData.issue_date,
+        amount,
+        income_type: formData.income_type,
+        order_id: isVenta ? formData.order_id : null,
+        payment_method_id: formData.payment_method_id || null,
+        description: formData.description || null,
+        notes: formData.notes || null,
+    };
+    // invoice_type: solo incluir si tiene valor (columna agregada en Phase 13)
+    if (formData.invoice_type) updatePayload.invoice_type = formData.invoice_type;
+
+    const { error: updateError } = await (supabase
+        .from('finance_incomes') as any)
+        .update(updatePayload)
+        .eq('id', id);
+
+    if (updateError) return { error: updateError.message };
+
+    // 3. Recalc old order if order changed
+    const oldOrderId = current.income_type === 'VENTA' ? current.order_id : null;
+    const newOrderId = isVenta ? formData.order_id : null;
+
+    if (oldOrderId && oldOrderId !== newOrderId) {
+        await recalcOrderPayment(supabase, oldOrderId);
+    }
+    if (newOrderId) {
+        await recalcOrderPayment(supabase, newOrderId);
+    }
+
+    revalidatePath('/finance/income');
+    revalidatePath('/orders');
+    return { success: true };
 }
 
 // ─── Delete Income ───

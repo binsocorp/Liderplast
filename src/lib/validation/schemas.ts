@@ -283,6 +283,7 @@ export type InventoryMovementFormData = z.infer<typeof inventoryMovementSchema>;
 // -----------------------------------------------
 
 export const purchaseSchema = z.object({
+    supplier_id: z.string().uuid('Seleccione un proveedor'),
     supplier_name: z.string().optional().default(''),
     purchase_date: z.string().min(1, 'La fecha es obligatoria'),
     voucher_type: z.string().optional().default(''),

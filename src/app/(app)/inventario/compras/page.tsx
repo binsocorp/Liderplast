@@ -6,10 +6,10 @@ export const dynamic = 'force-dynamic';
 export default async function ComprasPage() {
     const supabase = await createClient();
 
-    // Fetch purchases with items
+    // Fetch purchases with items + linked expense status
     const { data: purchases, error } = await (supabase
         .from('purchases') as any)
-        .select('*, purchase_items(*, item:inventory_items(name, unit))')
+        .select('*, purchase_items(*, item:inventory_items(name, unit)), supplier:suppliers(id, name), linked_expense:finance_expenses!purchase_id(id, status)')
         .order('created_at', { ascending: false });
 
     if (error) {
@@ -24,11 +24,19 @@ export default async function ComprasPage() {
         .eq('is_active', true)
         .order('name');
 
+    // Fetch suppliers
+    const { data: suppliers } = await (supabase
+        .from('suppliers') as any)
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name');
+
     return (
         <div className="p-1">
             <ComprasClient
                 purchases={purchases || []}
                 items={items || []}
+                suppliers={suppliers || []}
             />
         </div>
     );

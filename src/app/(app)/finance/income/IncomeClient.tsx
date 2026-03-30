@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, DollarSign, FileText, TrendingUp, Wallet } from 'lucide-react';
+import { Plus, Trash2, Pencil, DollarSign, FileText, TrendingUp, Wallet } from 'lucide-react';
 import {
     PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer
 } from 'recharts';
@@ -28,10 +28,18 @@ const INCOME_TYPES: Record<string, string> = {
     'OTRO': 'Otro Ingreso'
 };
 
+const INVOICE_TYPE_LABELS: Record<string, string> = {
+    'FACTURA_A': 'Fac. A',
+    'FACTURA_B': 'Fac. B',
+    'FACTURA_C': 'Fac. C',
+    'RECIBO': 'Recibo',
+};
+
 export function IncomeClient({ incomes, orders, paymentMethods }: any) {
     const router = useRouter();
 
     const [showModal, setShowModal] = useState(false);
+    const [editingIncome, setEditingIncome] = useState<any>(null);
 
     // Filters
     const now = new Date();
@@ -84,20 +92,26 @@ export function IncomeClient({ incomes, orders, paymentMethods }: any) {
             .filter((i: any) => i.income_type === 'VENTA')
             .reduce((acc: number, cur: any) => acc + Number(cur.amount), 0);
 
-        const monthExtra = monthIncomes
-            .filter((i: any) => i.income_type !== 'VENTA')
-            .reduce((acc: number, cur: any) => acc + Number(cur.amount), 0);
-
-        // Pending balance from all orders globally?
-        // Or only from selected orders? We just calculate from the passed non-completed orders:
         const totalPendingSales = orders.reduce((acc: number, o: any) => {
             const total = Number(o.total_net) || 0;
             const paid = Number(o.paid_amount) || 0;
             return o.payment_status !== 'PAID' && o.status !== 'CANCELADO' ? acc + (Math.max(0, total - paid)) : acc;
         }, 0);
 
-        return { monthTotal, todayTotal, monthSales, monthExtra, totalPendingSales };
+        return { monthTotal, todayTotal, monthSales, totalPendingSales };
     }, [incomes, orders]);
+
+    // Summary by payment method (from filtered)
+    const paymentMethodSummary = useMemo(() => {
+        const map = new Map<string, { name: string; total: number }>();
+        filtered.forEach((e: any) => {
+            const methodId = e.payment_method_id || '__none__';
+            const methodName = e.payment_method?.name || 'Sin medio de pago';
+            const existing = map.get(methodId) || { name: methodName, total: 0 };
+            map.set(methodId, { name: methodName, total: existing.total + Number(e.amount) });
+        });
+        return Array.from(map.values()).sort((a, b) => b.total - a.total);
+    }, [filtered]);
 
     // Pie chart
     const typePie = useMemo(() => {
@@ -109,6 +123,17 @@ export function IncomeClient({ incomes, orders, paymentMethods }: any) {
         return Array.from(map, ([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
     }, [filtered]);
 
+    function handleEdit(income: any) {
+        setEditingIncome(income);
+        setShowModal(true);
+    }
+
+    function handleCloseModal() {
+        setShowModal(false);
+        setEditingIncome(null);
+        router.refresh();
+    }
+
     async function handleDelete(id: string) {
         if (!confirm('¿Eliminar este ingreso? Esto revertirá el saldo cobrado en la venta asociada si existe.')) return;
         const res = await deleteIncome(id);
@@ -116,13 +141,15 @@ export function IncomeClient({ incomes, orders, paymentMethods }: any) {
         router.refresh();
     }
 
+    const filteredTotal = filtered.reduce((acc: number, e: any) => acc + Number(e.amount), 0);
+
     return (
         <>
             <PageHeader
                 title="Ingresos"
                 subtitle={`${filtered.length} movimientos`}
                 actions={
-                    <Button onClick={() => setShowModal(true)} icon={<Plus className="w-4 h-4" />}>
+                    <Button onClick={() => { setEditingIncome(null); setShowModal(true); }} icon={<Plus className="w-4 h-4" />}>
                         Nuevo Ingreso
                     </Button>
                 }
@@ -154,7 +181,45 @@ export function IncomeClient({ incomes, orders, paymentMethods }: any) {
             </KPIContainer>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <PieChartCard title="Distribución por Tipo" subtitle="Mes actual / Filtro" data={typePie} />
+                <PieChartCard title="Distribución por Tipo" subtitle="Período filtrado" data={typePie} />
+
+                {/* ING-04: Resumen por Medio de Pago */}
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 className="text-sm font-bold text-gray-900">Resumen por Medio de Pago</h3>
+                            <p className="text-xs text-gray-400 font-medium">Período filtrado</p>
+                        </div>
+                        <span className="text-sm font-bold text-gray-900">{formatCurrency(filteredTotal)}</span>
+                    </div>
+                    {paymentMethodSummary.length === 0 ? (
+                        <div className="h-40 flex items-center justify-center text-gray-400 text-sm">Sin datos</div>
+                    ) : (
+                        <div className="space-y-3">
+                            {paymentMethodSummary.map((item, i) => {
+                                const pct = filteredTotal > 0 ? (item.total / filteredTotal) * 100 : 0;
+                                return (
+                                    <div key={i}>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-sm font-medium text-gray-700">{item.name}</span>
+                                            <span className="text-sm font-bold text-gray-900">{formatCurrency(item.total)}</span>
+                                        </div>
+                                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full rounded-full transition-all duration-500"
+                                                style={{
+                                                    width: `${pct}%`,
+                                                    backgroundColor: COLORS[i % COLORS.length]
+                                                }}
+                                            />
+                                        </div>
+                                        <div className="text-right text-[10px] text-gray-400 font-medium mt-0.5">{pct.toFixed(1)}%</div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
             </div>
 
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -186,16 +251,19 @@ export function IncomeClient({ incomes, orders, paymentMethods }: any) {
                                         allLabel="Todos los medios"
                                     />
                                 </th>
+                                <th className="px-4 py-3 text-left">
+                                    <span className="text-[11px] font-black uppercase tracking-wider text-gray-500">Comprobante</span>
+                                </th>
                                 <th className="px-4 py-3 text-right">
                                     <span className="text-[11px] font-black uppercase tracking-wider text-gray-500">Monto</span>
                                 </th>
-                                <th className="px-4 py-3 w-16"></th>
+                                <th className="px-4 py-3 w-20"></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
                             {filtered.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="px-4 py-12 text-center text-gray-400 font-medium">
+                                    <td colSpan={7} className="px-4 py-12 text-center text-gray-400 font-medium">
                                         No hay ingresos registrados con los filtros actuales.
                                     </td>
                                 </tr>
@@ -213,12 +281,32 @@ export function IncomeClient({ incomes, orders, paymentMethods }: any) {
                                         <td className="px-4 py-3 text-gray-500 font-medium">
                                             {r.payment_method?.name || '-'}
                                         </td>
+                                        <td className="px-4 py-3">
+                                            {r.invoice_type ? (
+                                                <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-600">
+                                                    {INVOICE_TYPE_LABELS[r.invoice_type] || r.invoice_type}
+                                                </span>
+                                            ) : (
+                                                <span className="text-gray-400 text-xs">—</span>
+                                            )}
+                                        </td>
                                         <td className="px-4 py-3 text-right font-bold text-gray-900 tabular-nums">
                                             {formatCurrency(Number(r.amount))}
                                         </td>
                                         <td className="px-4 py-3">
-                                            <div className="flex justify-end">
-                                                <button onClick={() => handleDelete(r.id)} className="p-1.5 text-gray-400 hover:text-danger-600 hover:bg-danger-50 rounded-lg transition-colors" title="Eliminar">
+                                            <div className="flex justify-end gap-1">
+                                                <button
+                                                    onClick={() => handleEdit(r)}
+                                                    className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                                                    title="Editar"
+                                                >
+                                                    <Pencil className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(r.id)}
+                                                    className="p-1.5 text-gray-400 hover:text-danger-600 hover:bg-danger-50 rounded-lg transition-colors"
+                                                    title="Eliminar"
+                                                >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
                                             </div>
@@ -227,6 +315,15 @@ export function IncomeClient({ incomes, orders, paymentMethods }: any) {
                                 ))
                             )}
                         </tbody>
+                        {filtered.length > 0 && (
+                            <tfoot>
+                                <tr className="border-t-2 border-gray-200 bg-gray-50">
+                                    <td colSpan={5} className="px-4 py-3 text-sm font-bold text-gray-600 text-right">Total del período:</td>
+                                    <td className="px-4 py-3 text-right font-bold text-gray-900 tabular-nums">{formatCurrency(filteredTotal)}</td>
+                                    <td />
+                                </tr>
+                            </tfoot>
+                        )}
                     </table>
                 </div>
             </div>
@@ -234,9 +331,10 @@ export function IncomeClient({ incomes, orders, paymentMethods }: any) {
             {showModal && (
                 <NewIncomeModal
                     open={showModal}
-                    onClose={() => setShowModal(false)}
+                    onClose={handleCloseModal}
                     orders={orders}
                     paymentMethods={paymentMethods}
+                    editingIncome={editingIncome}
                 />
             )}
         </>
@@ -244,8 +342,6 @@ export function IncomeClient({ incomes, orders, paymentMethods }: any) {
 }
 
 function PieChartCard({ title, subtitle, data }: { title: string; subtitle: string; data: { name: string; value: number }[] }) {
-    const total = data.reduce((s, d) => s + d.value, 0);
-
     return (
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-4">
