@@ -16,7 +16,7 @@ interface BomItem {
     material_id: string;
     quantity_per_unit: number;
     notes: string;
-    material: { name: string; unit: string };
+    material: { name: string; unit: string; average_cost?: number; last_cost?: number };
 }
 
 interface Product {
@@ -28,6 +28,8 @@ interface Material {
     id: string;
     name: string;
     unit: string;
+    average_cost: number;
+    last_cost: number;
 }
 
 interface Props {
@@ -121,6 +123,19 @@ export function BomClient({ products, materials }: Props) {
             )
         },
         {
+            key: 'cost',
+            label: 'Costo est. / ud.',
+            render: (row) => {
+                const unitCost = row.material.average_cost || row.material.last_cost || 0;
+                const lineCost = unitCost * row.quantity_per_unit;
+                return (
+                    <span className="tabular-nums text-gray-700">
+                        ${lineCost.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    </span>
+                );
+            }
+        },
+        {
             key: 'notes',
             label: 'Notas',
             render: (row) => <span className="text-gray-500 text-sm">{row.notes || '—'}</span>
@@ -178,12 +193,30 @@ export function BomClient({ products, materials }: Props) {
             </div>
 
             {selectedProductId ? (
-                <DataTable
-                    columns={columns}
-                    data={bomItems}
-                    keyExtractor={(row) => row.id}
-                    emptyMessage={loading ? 'Cargando BOM...' : 'Este producto aún no tiene materiales definidos en su BOM'}
-                />
+                <>
+                    <DataTable
+                        columns={columns}
+                        data={bomItems}
+                        keyExtractor={(row) => row.id}
+                        emptyMessage={loading ? 'Cargando BOM...' : 'Este producto aún no tiene materiales definidos en su BOM'}
+                    />
+                    {bomItems.length > 0 && (() => {
+                        const totalCost = bomItems.reduce((sum, row) => {
+                            const unitCost = row.material.average_cost || row.material.last_cost || 0;
+                            return sum + unitCost * row.quantity_per_unit;
+                        }, 0);
+                        return (
+                            <div className="mt-3 flex justify-end">
+                                <div className="bg-white border border-gray-200 rounded-xl px-5 py-3 flex items-center gap-4">
+                                    <span className="text-sm font-medium text-gray-500">Costo estimado por unidad producida</span>
+                                    <span className="text-xl font-bold text-gray-900 tabular-nums">
+                                        ${totalCost.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                            </div>
+                        );
+                    })()}
+                </>
             ) : (
                 <div className="text-center py-20 bg-gray-50 rounded-xl border border-dashed border-gray-200">
                     <svg className="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -38,6 +38,7 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; d
 
     // Inventario — stock
     STOCK_OK: { label: 'OK', bg: 'bg-success-50', text: 'text-success-700', dot: 'bg-success-500' },
+    STOCK_ALERTA: { label: 'Alerta', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500' },
     STOCK_BAJO: { label: 'Bajo', bg: 'bg-danger-50', text: 'text-danger-700', dot: 'bg-danger-500' },
 
     // Cotizaciones

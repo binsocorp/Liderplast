@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Plus, ClipboardList } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { DataTable, Column } from '@/components/ui/DataTable';
@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { FormSection, FormField, FormGrid } from '@/components/ui/FormSection';
 import { Input, Select } from '@/components/ui/FormInputs';
-import { createInventoryItem, updateInventoryItem, deleteInventoryItem } from './actions';
+import { createInventoryItem, updateInventoryItem, deleteInventoryItem, createInventoryAdjustments } from './actions';
 
 // -----------------------------------------------
 // Types
@@ -64,6 +64,13 @@ export function InventarioClient({ items }: Props) {
     const [editItem, setEditItem] = useState<InventoryItem | null>(null);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+
+    // Toma de Inventario
+    const [tomaOpen, setTomaOpen] = useState(false);
+    const [tomaMotivo, setTomaMotivo] = useState('Conteo físico');
+    const [tomaCounts, setTomaCounts] = useState<Record<string, number>>({});
+    const [tomaSaving, setTomaSaving] = useState(false);
+    const [tomaError, setTomaError] = useState('');
 
     // Form state
     const [form, setForm] = useState({
@@ -147,6 +154,35 @@ export function InventarioClient({ items }: Props) {
         }
     }
 
+    function openToma() {
+        const initial: Record<string, number> = {};
+        items.filter(i => i.is_active).forEach(i => { initial[i.id] = Number(i.current_stock); });
+        setTomaCounts(initial);
+        setTomaMotivo('Conteo físico');
+        setTomaError('');
+        setTomaOpen(true);
+    }
+
+    async function handleToma() {
+        if (!tomaMotivo.trim()) { setTomaError('Ingresá un motivo'); return; }
+        const activeItems = items.filter(i => i.is_active);
+        const adjustments = activeItems
+            .filter(i => tomaCounts[i.id] !== undefined && Number(tomaCounts[i.id]) !== Number(i.current_stock))
+            .map(i => ({ item_id: i.id, current_stock: Number(i.current_stock), quantity: Number(tomaCounts[i.id]) }));
+
+        if (!adjustments.length) { setTomaError('No hay diferencias entre el conteo y el stock actual'); return; }
+
+        setTomaSaving(true);
+        setTomaError('');
+        const result = await createInventoryAdjustments(adjustments, tomaMotivo);
+        if ('error' in result && result.error) {
+            setTomaError(result.error);
+        } else {
+            setTomaOpen(false);
+        }
+        setTomaSaving(false);
+    }
+
     async function handleDelete() {
         if (!editItem) return;
         if (!confirm('¿Desactivar este ítem?')) return;
@@ -215,8 +251,9 @@ export function InventarioClient({ items }: Props) {
             label: 'Estado',
             render: (row) => {
                 if (!row.is_active) return <Badge status="CANCELLED" />;
-                if (row.min_stock > 0 && row.current_stock < row.min_stock) {
-                    return <Badge status="STOCK_BAJO" />;
+                if (row.min_stock > 0) {
+                    if (row.current_stock < row.min_stock) return <Badge status="STOCK_BAJO" />;
+                    if (row.current_stock < row.min_stock * 1.5) return <Badge status="STOCK_ALERTA" />;
                 }
                 return <Badge status="STOCK_OK" />;
             },
@@ -245,9 +282,14 @@ export function InventarioClient({ items }: Props) {
                 title="Inventario"
                 subtitle={`${activeItems.length} ítems · ${lowStockCount > 0 ? `⚠ ${lowStockCount} con stock bajo` : 'Stock OK'}`}
                 actions={
-                    <Button onClick={openNew} icon={<Plus className="w-4 h-4" />}>
-                        Nuevo Ítem
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button variant="secondary" onClick={openToma} icon={<ClipboardList className="w-4 h-4" />}>
+                            Toma de Inventario
+                        </Button>
+                        <Button onClick={openNew} icon={<Plus className="w-4 h-4" />}>
+                            Nuevo Ítem
+                        </Button>
+                    </div>
                 }
             />
 
@@ -309,7 +351,89 @@ export function InventarioClient({ items }: Props) {
                 }
             />
 
-            {/* Modal */}
+            {/* Modal Toma de Inventario */}
+            <Modal
+                open={tomaOpen}
+                onClose={() => setTomaOpen(false)}
+                title="Toma de Inventario"
+                size="lg"
+                footer={
+                    <>
+                        <Button variant="secondary" onClick={() => setTomaOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleToma} disabled={tomaSaving}>
+                            {tomaSaving ? 'Ajustando...' : 'Confirmar ajustes'}
+                        </Button>
+                    </>
+                }
+            >
+                <div className="space-y-4">
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                        Ingresá el stock físico contado para cada ítem. Solo se ajustarán los que tengan diferencias.
+                    </div>
+
+                    {tomaError && (
+                        <div className="p-3 bg-danger-50 border border-danger-200 rounded-lg text-sm text-danger-700">
+                            {tomaError}
+                        </div>
+                    )}
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Motivo del conteo</label>
+                        <input
+                            type="text"
+                            value={tomaMotivo}
+                            onChange={(e) => setTomaMotivo(e.target.value)}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            placeholder="Ej: Conteo fin de mes, inventario anual..."
+                        />
+                    </div>
+
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <table className="w-full text-sm">
+                            <thead className="bg-gray-50 border-b border-gray-200">
+                                <tr>
+                                    <th className="px-4 py-2 text-left font-semibold text-gray-600">Ítem</th>
+                                    <th className="px-4 py-2 text-right font-semibold text-gray-600">Stock sistema</th>
+                                    <th className="px-4 py-2 text-right font-semibold text-gray-600">Conteo real</th>
+                                    <th className="px-4 py-2 text-right font-semibold text-gray-600">Diferencia</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {items.filter(i => i.is_active).map(item => {
+                                    const counted = tomaCounts[item.id] ?? Number(item.current_stock);
+                                    const diff = counted - Number(item.current_stock);
+                                    return (
+                                        <tr key={item.id} className={diff !== 0 ? 'bg-amber-50' : ''}>
+                                            <td className="px-4 py-2">
+                                                <span className="font-medium text-gray-900">{item.name}</span>
+                                                <span className="text-gray-400 text-xs ml-1">{item.unit}</span>
+                                            </td>
+                                            <td className="px-4 py-2 text-right tabular-nums text-gray-500">
+                                                {Number(item.current_stock).toLocaleString('es-AR', { maximumFractionDigits: 2 })}
+                                            </td>
+                                            <td className="px-4 py-2 text-right">
+                                                <input
+                                                    type="number"
+                                                    min={0}
+                                                    step="0.01"
+                                                    value={counted}
+                                                    onChange={(e) => setTomaCounts(prev => ({ ...prev, [item.id]: Number(e.target.value) }))}
+                                                    className="w-24 border border-gray-300 rounded px-2 py-1 text-right text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                                />
+                                            </td>
+                                            <td className={`px-4 py-2 text-right tabular-nums font-semibold ${diff > 0 ? 'text-success-600' : diff < 0 ? 'text-danger-600' : 'text-gray-400'}`}>
+                                                {diff !== 0 ? `${diff > 0 ? '+' : ''}${diff.toLocaleString('es-AR', { maximumFractionDigits: 2 })}` : '—'}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Modal Ítem */}
             <Modal
                 open={modalOpen}
                 onClose={() => setModalOpen(false)}

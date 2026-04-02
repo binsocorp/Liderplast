@@ -71,6 +71,8 @@ const NAV_ITEMS = [
         subItems: [
             { label: 'Producción', href: '/produccion' },
             { label: 'BOM', href: '/produccion/bom' },
+            { label: 'Costos', href: '/produccion/costos' },
+            { label: 'Rendimiento', href: '/produccion/rendimiento' },
         ]
     },
     {

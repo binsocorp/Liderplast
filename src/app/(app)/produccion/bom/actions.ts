@@ -45,7 +45,7 @@ export async function getBomItems(productId: string) {
     const supabase = await createClient();
     const { data, error } = await (supabase
         .from('bom_items') as any)
-        .select('*, material:inventory_items(name, unit)')
+        .select('*, material:inventory_items(name, unit, average_cost, last_cost)')
         .eq('product_id', productId);
 
     if (error) return { error: error.message };

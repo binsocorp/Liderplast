@@ -17,7 +17,7 @@ export default async function BomPage() {
     // Fetch all materials/inputs (MATERIA_PRIMA, INSUMO)
     const { data: materials } = await (supabase
         .from('inventory_items') as any)
-        .select('id, name, unit')
+        .select('id, name, unit, average_cost, last_cost')
         .in('type', ['MATERIA_PRIMA', 'INSUMO'])
         .eq('is_active', true)
         .order('name');
