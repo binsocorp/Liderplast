@@ -62,10 +62,6 @@ export function CotizacionesClient({
 
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('TODAS');
-    const [dateRange, setDateRange] = useState({
-        from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-        to: new Date().toISOString().split('T')[0]
-    });
     const [sellerId, setSellerId] = useState('');
     const [provinceId, setProvinceId] = useState('');
     const [emisorId, setEmisorId] = useState('');
@@ -106,20 +102,13 @@ export function CotizacionesClient({
     ];
 
     const baseFiltered = useMemo(() => {
-        const dFrom = new Date(dateRange.from + 'T00:00:00');
-        const dTo = new Date(dateRange.to + 'T23:59:59');
-
         return quotations.filter(q => {
-            const d = new Date(q.created_at);
-            if (d < dFrom || d > dTo) return false;
-
             if (sellerId && q.seller_id !== sellerId) return false;
             if (provinceId && q.province_id !== provinceId) return false;
             if (emisorId && q.created_by !== emisorId) return false;
-
             return true;
         });
-    }, [quotations, dateRange, sellerId, provinceId, emisorId]);
+    }, [quotations, sellerId, provinceId, emisorId]);
 
     const filtered = useMemo(() => {
         return baseFiltered.filter(q => {
@@ -204,8 +193,6 @@ export function CotizacionesClient({
 
             {/* Filtros de segmentación */}
             <DashboardFilters
-                dateRange={dateRange}
-                onDateRangeChange={setDateRange}
                 filters={[
                     {
                         label: 'Vendedor',

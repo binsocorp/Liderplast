@@ -6,8 +6,10 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; d
     // Estado de pedido (4 estados principales)
     CONFIRMADO: { label: 'Confirmado', bg: 'bg-primary-50', text: 'text-primary-700', dot: 'bg-primary-500' },
     EN_VIAJE: { label: 'En viaje', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500' },
-    ESPERANDO_INSTALACION: { label: 'Esperando instalación', bg: 'bg-violet-50', text: 'text-violet-700', dot: 'bg-violet-500' },
+    EN_INSTALACION: { label: 'Instalación en proceso', bg: 'bg-violet-50', text: 'text-violet-700', dot: 'bg-violet-500' },
+    ESPERANDO_INSTALACION: { label: 'Instalación en proceso', bg: 'bg-violet-50', text: 'text-violet-700', dot: 'bg-violet-500' },
     COMPLETADO: { label: 'Completado', bg: 'bg-success-50', text: 'text-success-700', dot: 'bg-success-500' },
+    ARCHIVADO: { label: 'Archivado', bg: 'bg-gray-100', text: 'text-gray-500', dot: 'bg-gray-400' },
 
     // Estado de pago
     PENDING: { label: 'Pendiente', bg: 'bg-warning-50', text: 'text-warning-600', dot: 'bg-warning-500' },

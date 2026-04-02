@@ -12,6 +12,8 @@ interface ModalProps {
     paymentMethods: any[];
     /** Cuando se pasa, el modal trabaja en modo edición */
     editingIncome?: any;
+    /** Precarga el pedido seleccionado al abrir el modal desde el detalle de pedido */
+    preloadedOrderId?: string;
 }
 
 const INCOME_TYPES = [
@@ -29,7 +31,7 @@ const INVOICE_TYPES = [
     { value: 'RECIBO', label: 'Recibo' },
 ];
 
-export function NewIncomeModal({ open, onClose, orders, paymentMethods, editingIncome }: ModalProps) {
+export function NewIncomeModal({ open, onClose, orders, paymentMethods, editingIncome, preloadedOrderId }: ModalProps) {
     const isEdit = !!editingIncome;
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
@@ -45,7 +47,7 @@ export function NewIncomeModal({ open, onClose, orders, paymentMethods, editingI
 
     const [orderSearch, setOrderSearch] = useState('');
 
-    // Populate form when editing
+    // Populate form when editing or preloading from order detail
     useEffect(() => {
         if (editingIncome) {
             setIssueDate(editingIncome.issue_date || new Date().toISOString().split('T')[0]);
@@ -59,7 +61,7 @@ export function NewIncomeModal({ open, onClose, orders, paymentMethods, editingI
         } else {
             setIssueDate(new Date().toISOString().split('T')[0]);
             setIncomeType('VENTA');
-            setOrderId('');
+            setOrderId(preloadedOrderId || '');
             setAmount('');
             setPaymentMethodId('');
             setInvoiceType('');
@@ -68,7 +70,7 @@ export function NewIncomeModal({ open, onClose, orders, paymentMethods, editingI
         }
         setError('');
         setOrderSearch('');
-    }, [editingIncome, open]);
+    }, [editingIncome, open, preloadedOrderId]);
 
     const selectedOrder = orders.find(o => o.id === orderId);
     const pendingAmount = selectedOrder

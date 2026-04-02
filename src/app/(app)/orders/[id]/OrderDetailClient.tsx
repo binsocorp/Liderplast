@@ -6,7 +6,7 @@ import { Printer, Plus } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Input, Select } from '@/components/ui/FormInputs';
 import { Button } from '@/components/ui/Button';
-import { updateOrder } from '../actions';
+import { updateOrder, archiveOrder } from '../actions';
 import { replaceOrderItems } from '../bulkActions';
 import type { SalesChannel } from '@/lib/types/database';
 import { Badge } from '@/components/ui/Badge';
@@ -551,13 +551,23 @@ export function OrderDetailClient({
                         >
                             Volver
                         </Button>
-                        <Button
-                            onClick={handleSave}
-                            disabled={saving}
-                            className="h-14 px-10 rounded-2xl bg-primary-600 hover:bg-primary-500 text-white font-black uppercase text-xs tracking-widest transition-all shadow-xl shadow-primary-900/40 active:scale-95"
-                        >
-                            {saving ? 'Guardando...' : 'Guardar Cambios'}
-                        </Button>
+                        {order.status === 'COMPLETADO' && (
+                            <Button
+                                type="button"
+                                onClick={async () => {
+                                    if (!confirm('¿Archivar este pedido? Lo podrás ver en la sección de Archivados.')) return;
+                                    setSaving(true);
+                                    const result = await archiveOrder(order.id);
+                                    setSaving(false);
+                                    if (result.error) setError(result.error);
+                                    else router.push('/orders/archivados');
+                                }}
+                                disabled={saving}
+                                className="h-14 px-10 rounded-2xl bg-gray-600 hover:bg-gray-500 text-white font-black uppercase text-xs tracking-widest transition-all shadow-xl active:scale-95"
+                            >
+                                Archivar
+                            </Button>
+                        )}
                     </div>
                 </div>
             </div>

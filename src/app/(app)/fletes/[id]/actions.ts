@@ -59,6 +59,7 @@ export async function updateTripStatus(tripId: string, status: string) {
     const { error } = await (supabase
         .from('trips') as any)
         .update({ status })
+        .eq('id', tripId);
     if (error) return { error: error.message };
 
     // Sync order statuses based on trip status change
@@ -80,7 +81,7 @@ export async function updateTripStatus(tripId: string, status: string) {
 
         if (linkedOrders && linkedOrders.length > 0) {
             for (const order of linkedOrders as any[]) {
-                const newStatus = order.installer_id ? 'ESPERANDO_INSTALACION' : 'COMPLETADO';
+                const newStatus = order.installer_id ? 'EN_INSTALACION' : 'COMPLETADO';
                 await (supabase.from('orders') as any)
                     .update({ status: newStatus, updated_at: new Date().toISOString() })
                     .eq('id', order.id);

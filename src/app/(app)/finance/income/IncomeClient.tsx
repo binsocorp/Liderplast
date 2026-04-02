@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2, Pencil, DollarSign, FileText, TrendingUp, Wallet } from 'lucide-react';
 import {
@@ -35,11 +35,12 @@ const INVOICE_TYPE_LABELS: Record<string, string> = {
     'RECIBO': 'Recibo',
 };
 
-export function IncomeClient({ incomes, orders, paymentMethods }: any) {
+export function IncomeClient({ incomes, orders, paymentMethods, preloadedOrderId: initialOrderId }: any) {
     const router = useRouter();
 
-    const [showModal, setShowModal] = useState(false);
+    const [showModal, setShowModal] = useState(!!initialOrderId);
     const [editingIncome, setEditingIncome] = useState<any>(null);
+    const [preloadedOrderId, setPreloadedOrderId] = useState<string>(initialOrderId || '');
 
     // Filters
     const now = new Date();
@@ -131,6 +132,7 @@ export function IncomeClient({ incomes, orders, paymentMethods }: any) {
     function handleCloseModal() {
         setShowModal(false);
         setEditingIncome(null);
+        setPreloadedOrderId('');
         router.refresh();
     }
 
@@ -335,6 +337,7 @@ export function IncomeClient({ incomes, orders, paymentMethods }: any) {
                     orders={orders}
                     paymentMethods={paymentMethods}
                     editingIncome={editingIncome}
+                    preloadedOrderId={preloadedOrderId}
                 />
             )}
         </>

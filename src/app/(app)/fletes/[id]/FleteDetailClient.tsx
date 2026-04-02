@@ -87,7 +87,7 @@ export function FleteDetailClient({ trip, assignedOrders, availableOrders }: Fle
                             <Button onClick={() => handleStatusChange('EN_RUTA')}>Iniciar Viaje</Button>
                         )}
                         {trip.status === 'EN_RUTA' && (
-                            <Button onClick={() => handleStatusChange('ENTREGADO')} variant="secondary">Marcar Entregado</Button>
+                            <Button onClick={() => handleStatusChange('ENTREGADO')} variant="secondary">Finalizar Viaje</Button>
                         )}
                         <Badge status={trip.status} />
                     </div>
@@ -102,7 +102,7 @@ export function FleteDetailClient({ trip, assignedOrders, availableOrders }: Fle
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <CardContainer title="Fecha de Viaje" value={trip.trip_date ? new Intl.DateTimeFormat('es-AR').format(new Date(trip.trip_date)) : '-'} />
+                <CardContainer title="Fecha de Viaje" value={trip.trip_date ? (() => { const [y, m, d] = trip.trip_date.split('-').map(Number); return new Intl.DateTimeFormat('es-AR').format(new Date(y, m - 1, d)); })() : '-'} />
                 <CardContainer title="Costo" value={trip.cost ? `$${trip.cost.toLocaleString('es-AR', { maximumFractionDigits: 0 })}` : '-'} />
             </div>
 

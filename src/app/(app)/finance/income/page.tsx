@@ -56,6 +56,7 @@ export default async function IncomePage({
             incomes={incomes || []}
             orders={orders || []}
             paymentMethods={paymentMethods || []}
+            preloadedOrderId={searchParams.orderId}
         />
     );
 }

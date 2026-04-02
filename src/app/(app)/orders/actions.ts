@@ -100,6 +100,19 @@ export async function updateOrder(id: string, formData: Partial<OrderFormData> &
     return { success: true };
 }
 
+export async function archiveOrder(id: string) {
+    const supabase = await createClient();
+    const { error } = await (supabase.from('orders') as any)
+        .update({ status: 'ARCHIVADO', updated_at: new Date().toISOString() })
+        .eq('id', id);
+
+    if (error) return { error: error.message };
+
+    revalidatePath('/orders');
+    revalidatePath('/orders/archivados');
+    return { success: true };
+}
+
 export async function deleteOrder(id: string) {
     const supabase = await createClient();
     const { error } = await supabase.from('orders').delete().eq('id', id);

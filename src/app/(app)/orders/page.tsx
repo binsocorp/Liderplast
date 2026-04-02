@@ -8,6 +8,7 @@ export default async function OrdersPage() {
     const { data: ordersData, error } = await supabase
         .from('orders')
         .select('*, order_items(*, catalog_item:catalog_items(name))')
+        .neq('status', 'ARCHIVADO')
         .order('created_at', { ascending: false });
 
     if (error || !ordersData) {

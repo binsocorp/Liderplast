@@ -27,6 +27,10 @@ const NAV_ITEMS = [
             </svg>
         ),
         adminOnly: false,
+        subItems: [
+            { label: 'Todos los pedidos', href: '/orders' },
+            { label: 'Archivados', href: '/orders/archivados' },
+        ]
     },
     {
         label: 'Fletes',
@@ -116,7 +120,9 @@ export function Sidebar({ isAdmin }: SidebarProps) {
     const pathname = usePathname();
 
     const renderItem = (item: any) => {
-        const isActive = pathname.startsWith(item.href);
+        const isActive = item.subItems
+            ? item.subItems.some((sub: any) => pathname.startsWith(sub.href))
+            : pathname.startsWith(item.href);
         return (
             <div key={item.href} className="space-y-0.5">
                 <Link

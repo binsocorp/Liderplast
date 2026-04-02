@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Pencil, Trash2, Map } from 'lucide-react';
+import { Pencil, Trash2, Map, Play, Flag } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { DataTable, Column } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
@@ -33,29 +33,6 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
     const router = useRouter();
     const [showModal, setShowModal] = useState(false);
     const [editingTripId, setEditingTripId] = useState<string | null>(null);
-    const [selectedMonth, setSelectedMonth] = useState(() => {
-        const d = new Date();
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    });
-
-    const handlePrevMonth = () => {
-        const [year, month] = selectedMonth.split('-').map(Number);
-        const date = new Date(year, month - 2, 1);
-        setSelectedMonth(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
-    };
-
-    const handleNextMonth = () => {
-        const [year, month] = selectedMonth.split('-').map(Number);
-        const date = new Date(year, month, 1);
-        setSelectedMonth(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
-    };
-
-    const monthName = useMemo(() => {
-        const [year, month] = selectedMonth.split('-').map(Number);
-        const date = new Date(year, month - 1, 1);
-        return new Intl.DateTimeFormat('es-AR', { month: 'long', year: 'numeric' }).format(date);
-    }, [selectedMonth]);
-
     // Form State
     const [provinceId, setProvinceId] = useState('');
     const [exactAddress, setExactAddress] = useState('');
@@ -75,17 +52,13 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
 
     const selectedVehicle = useMemo(() => vehicles.find(v => v.id === vehicleId), [vehicleId, vehicles]);
 
-    // Statistics and filtering
-    const filteredTrips = useMemo(() => {
-        return trips.filter(t => t.trip_date?.startsWith(selectedMonth));
-    }, [trips, selectedMonth]);
-
+    // Statistics
     const stats = useMemo(() => {
-        const totalTrips = filteredTrips.length;
-        const totalBudgeted = filteredTrips.reduce((acc, t) => acc + (Number(t.cost) || 0), 0);
-        const totalActual = filteredTrips.reduce((acc, t) => acc + (Number((t as any).actual_cost) || 0), 0);
+        const totalTrips = trips.length;
+        const totalBudgeted = trips.reduce((acc, t) => acc + (Number(t.cost) || 0), 0);
+        const totalActual = trips.reduce((acc, t) => acc + (Number((t as any).actual_cost) || 0), 0);
         return { totalTrips, totalBudgeted, totalActual, profit: totalBudgeted - totalActual };
-    }, [filteredTrips]);
+    }, [trips]);
 
     // Edit mode computed values
     const editingTrip = useMemo(
@@ -227,11 +200,12 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
         else router.refresh();
     }
 
-    async function handleStatusChange(newStatus: string) {
-        if (!editingTripId) return;
+    async function handleStatusChange(newStatus: string, tripId?: string) {
+        const id = tripId ?? editingTripId;
+        if (!id) return;
         setError(null);
         setLoading(true);
-        const result = await updateTripStatus(editingTripId, newStatus);
+        const result = await updateTripStatus(id, newStatus);
         setLoading(false);
         if (result.error) setError(result.error);
         else router.refresh();
@@ -252,7 +226,11 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
         {
             key: 'trip_date',
             label: 'Fecha',
-            render: (row) => row.trip_date ? new Intl.DateTimeFormat('es-AR').format(new Date(row.trip_date)) : '-',
+            render: (row) => {
+                if (!row.trip_date) return '-';
+                const [year, month, day] = row.trip_date.split('-').map(Number);
+                return new Intl.DateTimeFormat('es-AR').format(new Date(year, month - 1, day));
+            },
         },
         {
             key: 'province',
@@ -309,6 +287,26 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
             label: '',
             render: (row) => (
                 <div className="flex items-center gap-1 justify-end">
+                    {row.status === 'PLANIFICADO' && (
+                        <button
+                            title="Iniciar Viaje"
+                            onClick={() => handleStatusChange('EN_RUTA', row.id)}
+                            className="flex items-center gap-1 px-2 py-1 text-xs font-bold text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+                        >
+                            <Play className="w-3.5 h-3.5" />
+                            Iniciar
+                        </button>
+                    )}
+                    {row.status === 'EN_RUTA' && (
+                        <button
+                            title="Finalizar Viaje"
+                            onClick={() => handleStatusChange('ENTREGADO', row.id)}
+                            className="flex items-center gap-1 px-2 py-1 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
+                        >
+                            <Flag className="w-3.5 h-3.5" />
+                            Finalizar
+                        </button>
+                    )}
                     <button
                         title="Descargar hoja de ruta"
                         onClick={() => window.open(`/fletes/${row.id}/hoja-ruta`, '_blank')}
@@ -341,44 +339,16 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
                 title="Gestión de Fletes"
                 subtitle={`${trips.length} fletes registrados`}
                 actions={
-                    <div className="flex gap-4 items-center">
-                        <div className="flex items-center bg-white border border-gray-200 rounded-xl px-2 py-1 shadow-sm gap-1">
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0 hover:bg-primary-50 text-gray-400 hover:text-primary-600 rounded-lg transition-colors flex items-center justify-center"
-                                onClick={handlePrevMonth}
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                </svg>
-                            </Button>
-                            <div className="flex flex-col items-center px-4 min-w-[140px]">
-                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter leading-none mb-0.5">Periodo</span>
-                                <span className="text-sm font-black text-indigo-950 capitalize tabular-nums">{monthName}</span>
-                            </div>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0 hover:bg-primary-50 text-gray-400 hover:text-primary-600 rounded-lg transition-colors flex items-center justify-center"
-                                onClick={handleNextMonth}
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                </svg>
-                            </Button>
-                        </div>
-                        <Button onClick={() => { resetForm(); setShowModal(true); }}>+ Nuevo Flete</Button>
-                    </div>
+                    <Button onClick={() => { resetForm(); setShowModal(true); }}>+ Nuevo Flete</Button>
                 }
             />
 
             {/* Statistics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
                 <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Viajes del Mes</p>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total de Viajes</p>
                     <p className="text-2xl font-black text-indigo-950">{stats.totalTrips}</p>
-                    <p className="text-[10px] text-gray-500 font-bold mt-1 uppercase italic opacity-50">Según fecha de viaje</p>
+                    <p className="text-[10px] text-gray-500 font-bold mt-1 uppercase italic opacity-50">Todos los fletes</p>
                 </div>
                 <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Costo Presupuestado</p>
@@ -401,7 +371,7 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
 
             <DataTable
                 columns={columns}
-                data={filteredTrips}
+                data={trips}
                 keyExtractor={(row) => row.id}
                 emptyMessage="No hay fletes registrados para este periodo"
             />
@@ -587,7 +557,7 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
                                         disabled={loading}
                                         className="w-full"
                                     >
-                                        Marcar como Entregado
+                                        Finalizar Viaje
                                     </Button>
                                 )}
 

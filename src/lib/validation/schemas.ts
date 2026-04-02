@@ -25,7 +25,7 @@ export const orderSchema = z.object({
     paid_amount: z.coerce.number().min(0).default(0),
     trip_id: z.string().uuid().nullable().optional(),
     installer_id: z.string().uuid().nullable().optional(),
-    status: z.enum(['PENDIENTE', 'CONFIRMADO', 'EN_VIAJE', 'ESPERANDO_INSTALACION', 'COMPLETADO']).default('PENDIENTE'),
+    status: z.enum(['PENDIENTE', 'CONFIRMADO', 'EN_VIAJE', 'EN_INSTALACION', 'ESPERANDO_INSTALACION', 'COMPLETADO']).default('PENDIENTE'),
     notes: z.string().optional().default(''),
 }).refine(
     (data) => {

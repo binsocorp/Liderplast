@@ -5,11 +5,12 @@ import { Printer } from 'lucide-react';
 
 const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-').map(Number);
     return new Intl.DateTimeFormat('es-AR', {
         year: 'numeric',
         month: 'long',
         day: 'numeric'
-    }).format(new Date(dateStr));
+    }).format(new Date(y, m - 1, d));
 };
 
 const formatCurrency = (val: number) =>

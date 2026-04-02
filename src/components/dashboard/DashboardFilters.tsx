@@ -8,11 +8,11 @@ interface FilterOption {
 }
 
 interface DashboardFiltersProps {
-    dateRange: {
+    dateRange?: {
         from: string;
         to: string;
     };
-    onDateRangeChange: (range: { from: string; to: string }) => void;
+    onDateRangeChange?: (range: { from: string; to: string }) => void;
     filters?: {
         label: string;
         value: string;
@@ -28,23 +28,25 @@ export function DashboardFilters({
 }: DashboardFiltersProps) {
     return (
         <div className="bg-white/50 backdrop-blur-sm border border-gray-200/60 rounded-2xl p-4 mb-6 sticky top-0 z-30 flex flex-wrap items-center gap-4 shadow-sm">
-            <div className="flex items-center gap-2">
-                <div className="flex items-center bg-gray-100 rounded-xl p-1">
-                    <input
-                        type="date"
-                        value={dateRange.from}
-                        onChange={(e) => onDateRangeChange({ ...dateRange, from: e.target.value })}
-                        className="bg-transparent border-none text-xs font-bold text-gray-700 focus:ring-0 px-2 py-1"
-                    />
-                    <span className="text-gray-400 text-[10px] font-black mx-1">—</span>
-                    <input
-                        type="date"
-                        value={dateRange.to}
-                        onChange={(e) => onDateRangeChange({ ...dateRange, to: e.target.value })}
-                        className="bg-transparent border-none text-xs font-bold text-gray-700 focus:ring-0 px-2 py-1"
-                    />
+            {dateRange && onDateRangeChange && (
+                <div className="flex items-center gap-2">
+                    <div className="flex items-center bg-gray-100 rounded-xl p-1">
+                        <input
+                            type="date"
+                            value={dateRange.from}
+                            onChange={(e) => onDateRangeChange({ ...dateRange, from: e.target.value })}
+                            className="bg-transparent border-none text-xs font-bold text-gray-700 focus:ring-0 px-2 py-1"
+                        />
+                        <span className="text-gray-400 text-[10px] font-black mx-1">—</span>
+                        <input
+                            type="date"
+                            value={dateRange.to}
+                            onChange={(e) => onDateRangeChange({ ...dateRange, to: e.target.value })}
+                            className="bg-transparent border-none text-xs font-bold text-gray-700 focus:ring-0 px-2 py-1"
+                        />
+                    </div>
                 </div>
-            </div>
+            )}
 
             {filters.map((filter, idx) => (
                 <div key={idx} className="flex flex-col">

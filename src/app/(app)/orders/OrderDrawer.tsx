@@ -114,7 +114,7 @@ export function OrderDrawer({ order, onClose, lookups }: OrderDrawerProps) {
                                 >
                                     <option value="CONFIRMADO">Confirmado</option>
                                     <option value="EN_VIAJE">En Viaje</option>
-                                    <option value="ESPERANDO_INSTALACION">Esperando Instalación</option>
+                                    <option value="EN_INSTALACION">Instalación en proceso</option>
                                     <option value="COMPLETADO">Completado</option>
                                 </select>
                             </div>
