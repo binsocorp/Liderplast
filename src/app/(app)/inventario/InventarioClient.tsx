@@ -26,6 +26,7 @@ interface InventoryItem {
     current_stock: number;
     min_stock: number;
     last_cost: number;
+    average_cost: number;
     is_active: boolean;
     created_at: string;
 }
@@ -90,7 +91,7 @@ export function InventarioClient({ items }: Props) {
     // Stats
     const activeItems = items.filter(i => i.is_active);
     const lowStockCount = activeItems.filter(i => i.current_stock < i.min_stock && i.min_stock > 0).length;
-    const totalValue = activeItems.reduce((sum, i) => sum + (i.current_stock * i.last_cost), 0);
+    const totalValue = activeItems.reduce((sum, i) => sum + (i.current_stock * (i.average_cost || i.last_cost)), 0);
 
     // Open modal
     function openNew() {
@@ -221,12 +222,19 @@ export function InventarioClient({ items }: Props) {
             },
         },
         {
-            key: 'last_cost',
-            label: 'Último costo',
+            key: 'average_cost',
+            label: 'Costo PPP',
             render: (row) => (
-                <span className="tabular-nums text-gray-600">
-                    ${Number(row.last_cost).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                </span>
+                <div className="flex flex-col">
+                    <span className="tabular-nums text-gray-900 font-medium">
+                        ${Number(row.average_cost || row.last_cost).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    </span>
+                    {row.average_cost > 0 && row.last_cost !== row.average_cost && (
+                        <span className="text-xs text-gray-400 tabular-nums">
+                            último: ${Number(row.last_cost).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        </span>
+                    )}
+                </div>
             ),
         },
     ];
@@ -294,6 +302,11 @@ export function InventarioClient({ items }: Props) {
                 keyExtractor={(row) => row.id}
                 onRowClick={openEdit}
                 emptyMessage="No hay ítems de inventario"
+                getRowClassName={(row) =>
+                    row.is_active && row.min_stock > 0 && row.current_stock < row.min_stock
+                        ? 'bg-red-50 hover:bg-red-100'
+                        : ''
+                }
             />
 
             {/* Modal */}

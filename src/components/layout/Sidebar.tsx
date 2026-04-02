@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 
 interface SidebarProps {
     isAdmin: boolean;
+    lowStockCount?: number;
 }
 
 const NAV_ITEMS = [
@@ -116,13 +117,14 @@ const ADMIN_ITEMS = [
     },
 ];
 
-export function Sidebar({ isAdmin }: SidebarProps) {
+export function Sidebar({ isAdmin, lowStockCount = 0 }: SidebarProps) {
     const pathname = usePathname();
 
     const renderItem = (item: any) => {
         const isActive = item.subItems
             ? item.subItems.some((sub: any) => pathname.startsWith(sub.href))
             : pathname.startsWith(item.href);
+        const showStockBadge = item.href === '/inventario' && lowStockCount > 0;
         return (
             <div key={item.href} className="space-y-0.5">
                 <Link
@@ -136,9 +138,16 @@ export function Sidebar({ isAdmin }: SidebarProps) {
                         {item.icon}
                     </span>
                     {item.label}
-                    {isActive && (
-                        <div className="ml-auto w-1.5 h-1.5 rounded-full bg-sidebar-300 animate-pulse" />
-                    )}
+                    <div className="ml-auto flex items-center gap-1">
+                        {showStockBadge && (
+                            <span className="bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 leading-none">
+                                {lowStockCount}
+                            </span>
+                        )}
+                        {isActive && !showStockBadge && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-sidebar-300 animate-pulse" />
+                        )}
+                    </div>
                 </Link>
                 {item.subItems && (isActive || pathname.startsWith(item.href)) && (
                     <div className="ml-9 space-y-0.5 border-l border-sidebar-600 pl-3">

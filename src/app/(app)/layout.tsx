@@ -24,10 +24,19 @@ export default async function AppLayout({
 
     const isAdmin = (profile as any)?.role === 'ADMIN';
 
+    const { data: stockAlertItems } = await (supabase
+        .from('inventory_items') as any)
+        .select('current_stock, min_stock')
+        .eq('is_active', true)
+        .gt('min_stock', 0);
+
+    const lowStockCount = (stockAlertItems as any[] | null)
+        ?.filter((i: any) => Number(i.current_stock) < Number(i.min_stock)).length ?? 0;
+
     return (
         <AppProviders>
             <div className="flex h-screen overflow-hidden">
-                <Sidebar isAdmin={isAdmin} />
+                <Sidebar isAdmin={isAdmin} lowStockCount={lowStockCount} />
                 <div className="flex-1 flex flex-col overflow-hidden">
                     <Header
                         userName={(profile as any)?.full_name || user.email || ''}

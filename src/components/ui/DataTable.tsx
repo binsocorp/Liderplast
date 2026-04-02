@@ -24,6 +24,7 @@ interface DataTableProps<T> {
     keyExtractor: (row: T) => string;
     onRowClick?: (row: T) => void;
     emptyMessage?: string;
+    getRowClassName?: (row: T) => string;
 }
 
 export function DataTable<T>({
@@ -32,6 +33,7 @@ export function DataTable<T>({
     keyExtractor,
     onRowClick,
     emptyMessage = 'No hay datos para mostrar',
+    getRowClassName,
 }: DataTableProps<T>) {
     return (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -64,10 +66,7 @@ export function DataTable<T>({
                                 <tr
                                     key={keyExtractor(row)}
                                     onClick={() => onRowClick?.(row)}
-                                    className={`transition-colors ${onRowClick
-                                            ? 'cursor-pointer hover:bg-gray-50'
-                                            : ''
-                                        }`}
+                                    className={`transition-colors ${onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''} ${getRowClassName ? getRowClassName(row) : ''}`}
                                 >
                                     {columns.map((col) => (
                                         <td
