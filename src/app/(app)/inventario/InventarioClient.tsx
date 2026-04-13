@@ -28,11 +28,18 @@ interface InventoryItem {
     last_cost: number;
     average_cost: number;
     is_active: boolean;
+    catalog_item_id: string | null;
     created_at: string;
+}
+
+interface CatalogItem {
+    id: string;
+    name: string;
 }
 
 interface Props {
     items: InventoryItem[];
+    catalogItems: CatalogItem[];
 }
 
 const TYPE_OPTIONS = [
@@ -56,7 +63,7 @@ const UNIT_OPTIONS = [
 // Component
 // -----------------------------------------------
 
-export function InventarioClient({ items }: Props) {
+export function InventarioClient({ items, catalogItems }: Props) {
     const [search, setSearch] = useState('');
     const [typeFilter, setTypeFilter] = useState('');
     const [showInactive, setShowInactive] = useState(false);
@@ -82,6 +89,7 @@ export function InventarioClient({ items }: Props) {
         min_stock: 0,
         last_cost: 0,
         is_active: true,
+        catalog_item_id: null as string | null,
     });
 
     // Filter items
@@ -111,7 +119,8 @@ export function InventarioClient({ items }: Props) {
             conversion_factor: 1,
             min_stock: 0,
             last_cost: 0,
-            is_active: true
+            is_active: true,
+            catalog_item_id: null,
         });
         setError('');
         setModalOpen(true);
@@ -128,6 +137,7 @@ export function InventarioClient({ items }: Props) {
             min_stock: item.min_stock,
             last_cost: item.last_cost,
             is_active: item.is_active,
+            catalog_item_id: item.catalog_item_id || null,
         });
         setError('');
         setModalOpen(true);
@@ -549,6 +559,17 @@ export function InventarioClient({ items }: Props) {
                             </FormField>
                         )}
                     </FormGrid>
+
+                    {form.type === 'PRODUCTO_FINAL' && (
+                        <FormField label="Ítem de catálogo vinculado">
+                            <Select
+                                value={form.catalog_item_id || ''}
+                                onChange={(e) => setForm(f => ({ ...f, catalog_item_id: e.target.value || null }))}
+                                options={catalogItems.map(c => ({ value: c.id, label: c.name }))}
+                                placeholder="Seleccionar ítem del catálogo (opcional)..."
+                            />
+                        </FormField>
+                    )}
                 </FormSection>
             </Modal>
         </>

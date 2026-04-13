@@ -36,6 +36,8 @@ interface Purchase {
     notes: string;
     total: number;
     status: string;
+    payment_method_id: string | null;
+    payment_method?: { id: string; name: string } | null;
     created_at: string;
     purchase_items: PurchaseItem[];
     linked_expense?: { id: string; status: string }[] | null;
@@ -53,10 +55,16 @@ interface InventoryItemLookup {
     last_cost: number;
 }
 
+interface PaymentMethod {
+    id: string;
+    name: string;
+}
+
 interface Props {
     purchases: Purchase[];
     items: InventoryItemLookup[];
     suppliers: Supplier[];
+    paymentMethods: PaymentMethod[];
 }
 
 interface LineItem {
@@ -83,7 +91,7 @@ function getSupplierLabel(p: Purchase): string {
 // Component
 // -----------------------------------------------
 
-export function ComprasClient({ purchases, items, suppliers }: Props) {
+export function ComprasClient({ purchases, items, suppliers, paymentMethods }: Props) {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [dateFrom, setDateFrom] = useState('');
@@ -107,6 +115,7 @@ export function ComprasClient({ purchases, items, suppliers }: Props) {
         voucher_type: '',
         voucher_number: '',
         notes: '',
+        payment_method_id: '' as string,
     });
     const [lines, setLines] = useState<LineItem[]>([{ item_id: '', quantity: 1, unit_price: 0 }]);
 
@@ -176,6 +185,7 @@ export function ComprasClient({ purchases, items, suppliers }: Props) {
             voucher_type: '',
             voucher_number: '',
             notes: '',
+            payment_method_id: '',
         });
         setLines([{ item_id: '', quantity: 1, unit_price: 0 }]);
         setError('');
@@ -198,7 +208,10 @@ export function ComprasClient({ purchases, items, suppliers }: Props) {
 
         try {
             const result = await createPurchase({
-                purchase: form as any,
+                purchase: {
+                    ...form,
+                    payment_method_id: form.payment_method_id || null,
+                } as any,
                 items: validLines,
             });
 
@@ -286,6 +299,14 @@ export function ComprasClient({ purchases, items, suppliers }: Props) {
                     ${Number(row.total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                 </span>
             ),
+        },
+        {
+            key: 'payment_method',
+            label: 'Cuenta',
+            render: (row) => {
+                const pm = paymentMethods.find(p => p.id === row.payment_method_id);
+                return <span className="text-gray-500 text-xs">{pm?.name ?? '—'}</span>;
+            },
         },
         {
             key: 'status',
@@ -435,6 +456,12 @@ export function ComprasClient({ purchases, items, suppliers }: Props) {
                                 <span className="text-gray-400">Estado:</span>{' '}
                                 <Badge status={detailPurchase.status} />
                             </div>
+                            <div>
+                                <span className="text-gray-400">Cuenta de pago:</span>{' '}
+                                <span className="font-medium">
+                                    {paymentMethods.find(p => p.id === detailPurchase.payment_method_id)?.name ?? '—'}
+                                </span>
+                            </div>
                         </div>
 
                         {detailPurchase.notes && (
@@ -571,14 +598,24 @@ export function ComprasClient({ purchases, items, suppliers }: Props) {
                                 />
                             </FormField>
                         </FormGrid>
-                        <FormField label="Observaciones">
-                            <Textarea
-                                value={form.notes}
-                                onChange={(e) => setForm(f => ({ ...f, notes: e.target.value }))}
-                                placeholder="Notas sobre la compra..."
-                                rows={2}
-                            />
-                        </FormField>
+                        <FormGrid cols={2}>
+                            <FormField label="Cuenta de pago">
+                                <Select
+                                    value={form.payment_method_id}
+                                    onChange={(e) => setForm(f => ({ ...f, payment_method_id: e.target.value }))}
+                                    options={paymentMethods.map(pm => ({ value: pm.id, label: pm.name }))}
+                                    placeholder="Seleccionar cuenta..."
+                                />
+                            </FormField>
+                            <FormField label="Observaciones">
+                                <Textarea
+                                    value={form.notes}
+                                    onChange={(e) => setForm(f => ({ ...f, notes: e.target.value }))}
+                                    placeholder="Notas sobre la compra..."
+                                    rows={2}
+                                />
+                            </FormField>
+                        </FormGrid>
                     </FormSection>
 
                     {/* Line items */}

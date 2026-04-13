@@ -260,6 +260,7 @@ export const inventoryItemSchema = z.object({
     min_stock: z.coerce.number().min(0).default(0),
     last_cost: z.coerce.number().min(0).default(0),
     is_active: z.boolean().default(true),
+    catalog_item_id: z.string().uuid().nullable().optional(),
 });
 
 export type InventoryItemFormData = z.infer<typeof inventoryItemSchema>;
@@ -290,6 +291,7 @@ export const purchaseSchema = z.object({
     voucher_number: z.string().optional().default(''),
     notes: z.string().optional().default(''),
     status: z.enum(['BORRADOR', 'CONFIRMADA', 'ANULADA']).default('CONFIRMADA'),
+    payment_method_id: z.string().uuid().nullable().optional(),
 });
 
 export type PurchaseFormData = z.infer<typeof purchaseSchema>;

@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { FormSection, FormField, FormGrid } from '@/components/ui/FormSection';
 import { Input, Select, Textarea } from '@/components/ui/FormInputs';
-import { createProductionRecord, deleteProductionRecord } from './actions';
+import { createProductionRecords, deleteProductionRecord } from './actions';
 
 interface ProductionRecord {
     id: string;
@@ -30,11 +30,17 @@ interface Product {
 }
 
 interface Shortage {
+    product?: string;
     material: string;
     required: number;
     available: number;
     unit: string;
     missing: number;
+}
+
+interface ProductionLine {
+    product_id: string;
+    quantity: number;
 }
 
 interface Props {
@@ -52,9 +58,8 @@ export function ProduccionClient({ productions, products }: Props) {
     const [error, setError] = useState('');
     const [shortages, setShortages] = useState<Shortage[]>([]);
 
-    const [form, setForm] = useState({
-        product_id: '',
-        quantity: 0,
+    const [lines, setLines] = useState<ProductionLine[]>([{ product_id: '', quantity: 0 }]);
+    const [shared, setShared] = useState({
         production_date: new Date().toISOString().split('T')[0],
         notes: '',
     });
@@ -75,20 +80,29 @@ export function ProduccionClient({ productions, products }: Props) {
     });
 
     function openNew() {
-        setForm({
-            product_id: '',
-            quantity: 0,
-            production_date: new Date().toISOString().split('T')[0],
-            notes: '',
-        });
+        setLines([{ product_id: '', quantity: 0 }]);
+        setShared({ production_date: new Date().toISOString().split('T')[0], notes: '' });
         setError('');
         setShortages([]);
         setModalOpen(true);
     }
 
+    function addLine() {
+        setLines(prev => [...prev, { product_id: '', quantity: 0 }]);
+    }
+
+    function removeLine(idx: number) {
+        setLines(prev => prev.filter((_, i) => i !== idx));
+    }
+
+    function updateLine(idx: number, field: keyof ProductionLine, value: string | number) {
+        setLines(prev => prev.map((l, i) => i === idx ? { ...l, [field]: value } : l));
+    }
+
     async function handleSave() {
-        if (!form.product_id || form.quantity <= 0) {
-            setError('Complete los campos requeridos');
+        const validLines = lines.filter(l => l.product_id && l.quantity > 0);
+        if (validLines.length === 0) {
+            setError('Complete al menos un producto con cantidad válida');
             return;
         }
 
@@ -96,12 +110,12 @@ export function ProduccionClient({ productions, products }: Props) {
         setError('');
         setShortages([]);
 
-        const result = await createProductionRecord(form as any);
+        const result = await createProductionRecords(validLines, shared);
 
         if ('error' in result && result.error) {
             setError(result.error);
             if ('shortages' in result && Array.isArray(result.shortages)) {
-                setShortages(result.shortages);
+                setShortages(result.shortages as Shortage[]);
             }
         } else {
             setModalOpen(false);
@@ -238,6 +252,7 @@ export function ProduccionClient({ productions, products }: Props) {
                                 <table className="w-full text-xs bg-white">
                                     <thead className="bg-danger-50">
                                         <tr>
+                                            <th className="px-2 py-1 text-left">Producto</th>
                                             <th className="px-2 py-1 text-left">Material</th>
                                             <th className="px-2 py-1 text-right">Nec.</th>
                                             <th className="px-2 py-1 text-right">Disp.</th>
@@ -247,6 +262,7 @@ export function ProduccionClient({ productions, products }: Props) {
                                     <tbody className="divide-y divide-gray-100">
                                         {shortages.map((s, i) => (
                                             <tr key={i}>
+                                                <td className="px-2 py-1 text-gray-500">{s.product ?? '—'}</td>
                                                 <td className="px-2 py-1 font-medium">{s.material}</td>
                                                 <td className="px-2 py-1 text-right">{s.required.toFixed(2)}</td>
                                                 <td className="px-2 py-1 text-right">{s.available.toFixed(2)}</td>
@@ -260,47 +276,78 @@ export function ProduccionClient({ productions, products }: Props) {
                     </div>
                 )}
 
-                <FormSection title="Detalle de la fabricación">
-                    <FormField label="Producto Final" required>
-                        <Select
-                            value={form.product_id}
-                            onChange={(e) => setForm(f => ({ ...f, product_id: e.target.value }))}
-                            options={products.map(p => ({ value: p.id, label: p.name }))}
-                            placeholder="Seleccione el producto fabricado..."
-                        />
-                    </FormField>
+                <FormSection title="Fecha y observaciones">
                     <FormGrid cols={2}>
-                        <FormField label="Cantidad producida" required>
-                            <Input
-                                type="number"
-                                value={form.quantity || ''}
-                                onChange={(e) => setForm(f => ({ ...f, quantity: Number(e.target.value) }))}
-                                min={0.01}
-                                step="0.01"
-                                placeholder="0"
-                            />
-                        </FormField>
                         <FormField label="Fecha de producción" required>
                             <Input
                                 type="date"
-                                value={form.production_date}
-                                onChange={(e) => setForm(f => ({ ...f, production_date: e.target.value }))}
+                                value={shared.production_date}
+                                onChange={(e) => setShared(s => ({ ...s, production_date: e.target.value }))}
+                            />
+                        </FormField>
+                        <FormField label="Notas / Observaciones (opcional)">
+                            <Input
+                                value={shared.notes}
+                                onChange={(e) => setShared(s => ({ ...s, notes: e.target.value }))}
+                                placeholder="Turno, lote, incidencias..."
                             />
                         </FormField>
                     </FormGrid>
-                    <FormField label="Notas / Observaciones (opcional)">
-                        <Textarea
-                            value={form.notes}
-                            onChange={(e) => setForm(f => ({ ...f, notes: e.target.value }))}
-                            placeholder="Ej: Turno mañana, lote específico, incidencias..."
-                            rows={3}
-                        />
-                    </FormField>
-                    <div className="p-3 bg-primary-50 rounded-lg text-xs text-primary-700 flex items-start gap-2">
+                </FormSection>
+
+                <FormSection title="Productos fabricados">
+                    <div className="space-y-2">
+                        {lines.map((line, idx) => (
+                            <div key={idx} className="flex items-end gap-3 p-3 bg-gray-50 rounded-lg">
+                                <div className="flex-1 min-w-0">
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Producto Final</label>
+                                    <Select
+                                        value={line.product_id}
+                                        onChange={(e) => updateLine(idx, 'product_id', e.target.value)}
+                                        options={products.map(p => ({ value: p.id, label: p.name }))}
+                                        placeholder="Seleccionar producto..."
+                                        uiSize="sm"
+                                    />
+                                </div>
+                                <div className="w-32">
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Cantidad</label>
+                                    <Input
+                                        type="number"
+                                        value={line.quantity || ''}
+                                        onChange={(e) => updateLine(idx, 'quantity', Number(e.target.value))}
+                                        min={0.01}
+                                        step="0.01"
+                                        placeholder="0"
+                                        uiSize="sm"
+                                    />
+                                </div>
+                                {lines.length > 1 && (
+                                    <button
+                                        onClick={() => removeLine(idx)}
+                                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-danger-50 text-gray-400 hover:text-danger-500 transition-colors mb-0.5"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+
+                    <Button variant="ghost" size="sm" onClick={addLine} icon={
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                    }>
+                        Agregar otro producto
+                    </Button>
+
+                    <div className="p-3 bg-primary-50 rounded-lg text-xs text-primary-700 flex items-start gap-2 mt-2">
                         <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <p>Al confirmar, se aumentará el stock del producto y se descontarán automáticamente de inventario todos los materiales definidos en su BOM.</p>
+                        <p>Al confirmar, se actualizará el stock de cada producto y se descontarán automáticamente los materiales de su BOM.</p>
                     </div>
                 </FormSection>
             </Modal>

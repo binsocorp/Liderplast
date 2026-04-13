@@ -16,7 +16,7 @@ export default async function CajaPage() {
     // Fetch all account movements (ordered newest first)
     const { data: movements, error } = await (supabase
         .from('account_movements') as any)
-        .select('*, payment_method:finance_payment_methods(id, name), transfer_to:finance_payment_methods!transfer_to_method_id(id, name)')
+        .select('*, payment_method:finance_payment_methods!payment_method_id(id, name), transfer_to:finance_payment_methods!transfer_to_method_id(id, name)')
         .order('movement_date', { ascending: false })
         .order('created_at', { ascending: false });
 

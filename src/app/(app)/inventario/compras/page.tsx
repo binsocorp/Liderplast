@@ -31,12 +31,20 @@ export default async function ComprasPage() {
         .eq('is_active', true)
         .order('name');
 
+    // Fetch payment methods (accounts)
+    const { data: paymentMethods } = await (supabase
+        .from('finance_payment_methods') as any)
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name');
+
     return (
         <div className="p-1">
             <ComprasClient
                 purchases={purchases || []}
                 items={items || []}
                 suppliers={suppliers || []}
+                paymentMethods={paymentMethods || []}
             />
         </div>
     );
