@@ -171,10 +171,14 @@ export async function acceptQuotation(quotationId: string) {
             channel: (quotation as any).channel,
             seller_id: (quotation as any).seller_id,
             reseller_id: (quotation as any).reseller_id,
-            discount_amount: (quotation as any).discount_amount,
-            tax_amount_manual: (quotation as any).tax_amount_manual,
+            freight_amount: (quotation as any).freight_amount ?? 0,
+            installation_amount: (quotation as any).installation_amount ?? 0,
+            travel_amount: (quotation as any).travel_amount ?? 0,
+            other_amount: (quotation as any).other_amount ?? 0,
+            discount_amount: (quotation as any).discount_amount ?? 0,
+            tax_amount_manual: (quotation as any).tax_amount_manual ?? 0,
             notes: (quotation as any).notes,
-            status: 'PENDIENTE',
+            status: 'CONFIRMADO',
             created_by: user.id,
         } as any)
         .select('id, order_number')

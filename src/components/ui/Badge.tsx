@@ -57,7 +57,6 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; d
     CANCELLED: { label: 'Cancelado', bg: 'bg-danger-50', text: 'text-danger-700' },
     INTERNO: { label: 'Interno', bg: 'bg-primary-50', text: 'text-primary-700' },
     REVENDEDOR: { label: 'Revendedor', bg: 'bg-purple-50', text: 'text-purple-700' },
-    PENDIENTE: { label: 'Pendiente', bg: 'bg-warning-50', text: 'text-warning-700' },
     EN_CURSO: { label: 'En Curso', bg: 'bg-primary-50', text: 'text-primary-700' },
     PRODUCTO: { label: 'Producto', bg: 'bg-primary-50', text: 'text-primary-700' },
     SERVICIO: { label: 'Servicio', bg: 'bg-purple-50', text: 'text-purple-700' },

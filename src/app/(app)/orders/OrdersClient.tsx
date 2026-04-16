@@ -323,7 +323,7 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <Badge status={order.status || 'PENDIENTE'} />
+                                                    <Badge status={order.status || 'CONFIRMADO'} />
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right">
                                                     <div className="flex justify-end gap-2">

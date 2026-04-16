@@ -131,6 +131,8 @@ export function NewOrderForm({
         if (kitFiltrado) sum += getPrice(getItemId('Kit Filtrado'));
         if (accesoriosInst) sum += getPrice(getItemId('Accesorios Instalación'));
         if (luces) sum += getPrice(getItemId('Luces'));
+        if (prevClima) sum += getPrice(getItemId('Prev. Climatización'));
+        if (prevCascada) sum += getPrice(getItemId('Prev. Cascada'));
         if (cascada) sum += getPrice(getItemId('Cascada'));
         if (kitLimpieza) sum += getPrice(getItemId('Kit Limpieza'));
         sum += colorExtra;
