@@ -91,7 +91,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         supabase.from('resellers').select('id, name').eq('is_active', true).order('name').then(r => r.data ?? []),
         supabase.from('trips').select('id, trip_code, trip_date, exact_address, vehicle:vehicles(name, capacity)').order('created_at', { ascending: false }).then(r => r.data ?? []),
         supabase.from('installers').select('id, name').eq('is_active', true).order('name').then(r => r.data ?? []),
-        supabase.from('catalog_items').select('id, name, type').eq('is_active', true).order('name').then(r => r.data ?? []),
+        supabase.from('catalog_items').select('id, name, type, sales_category').eq('is_active', true).order('name').then(r => r.data ?? []),
         supabase.from('prices').select('catalog_item_id, province_id, unit_price_net').eq('is_active', true).then(r => r.data ?? []),
         supabase.from('orders').select('trip_id').not('trip_id', 'is', null).then(r => r.data ?? []),
         supabase.from('reseller_price_lists').select('id, name').eq('is_active', true).order('name').then(r => r.data ?? []),

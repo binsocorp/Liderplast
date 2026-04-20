@@ -7,7 +7,7 @@ export default async function OrdersPage() {
     // 1. Fetch base orders + items
     const { data: ordersData, error } = await supabase
         .from('orders')
-        .select('*, order_items(*, catalog_item:catalog_items(name))')
+        .select('*, order_items(*, catalog_item:catalog_items(name, sales_category))')
         .neq('status', 'ARCHIVADO')
         .order('created_at', { ascending: false });
 

@@ -7,7 +7,7 @@ export default async function ResellerPricesPage() {
     // 1. Fetch Lists, Items, and existing Reseller Prices
     const [lists, items, prices] = await Promise.all([
         supabase.from('reseller_price_lists').select('id, name').eq('is_active', true).order('name'),
-        supabase.from('catalog_items').select('id, name, type').eq('is_active', true).order('name'),
+        supabase.from('catalog_items').select('id, name, type, sales_category').eq('is_active', true).order('name'),
         supabase.from('reseller_prices').select('*')
     ]);
 

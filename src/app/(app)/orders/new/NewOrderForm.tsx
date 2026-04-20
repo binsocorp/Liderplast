@@ -72,7 +72,7 @@ export function NewOrderForm({
 
     // Mapeo Rápido de Items Fijos
     const getItemId = (name: string) => catalogItems.find((c: any) => c.name === name)?.id || '';
-    const cascos = catalogItems.filter((c: any) => c.name.startsWith('P-'));
+    const cascos = catalogItems.filter((c: any) => c.sales_category === 'CASCO');
 
     // Búsqueda de precio dinámico
     const getPrice = (itemId: string) => {

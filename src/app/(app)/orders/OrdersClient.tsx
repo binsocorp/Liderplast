@@ -55,7 +55,7 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
 
     const getCascoInfo = (items: any[] = []) => {
         const cascoitem = items.find(i =>
-            i.catalog_item?.name?.startsWith('P-') ||
+            i.catalog_item?.sales_category === 'CASCO' ||
             i.description?.toLowerCase().includes('casco')
         );
 

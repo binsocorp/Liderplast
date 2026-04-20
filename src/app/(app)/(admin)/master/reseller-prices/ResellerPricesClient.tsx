@@ -21,8 +21,8 @@ export function ResellerPricesClient({ lists, items, initialPrices, cordobaPrice
     const [newListName, setNewListName] = useState('');
 
     const sortedItems = useMemo(() => {
-        const cascos = items.filter(c => c.name.startsWith('P-')).sort((a, b) => a.name.localeCompare(b.name));
-        const others = items.filter(c => !c.name.startsWith('P-')).sort((a, b) => a.name.localeCompare(b.name));
+        const cascos = items.filter((c: any) => c.sales_category === 'CASCO').sort((a, b) => a.name.localeCompare(b.name));
+        const others = items.filter((c: any) => c.sales_category !== 'CASCO').sort((a, b) => a.name.localeCompare(b.name));
         return [...cascos, ...others];
     }, [items]);
 

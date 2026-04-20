@@ -36,7 +36,7 @@ export function OrderDetailClient({
     };
 
     const hasItem = (name: string) => getItemQty(name) > 0;
-    const findCasco = () => items.find((i: any) => i.catalog_item?.name?.startsWith('P-'));
+    const findCasco = () => items.find((i: any) => i.catalog_item?.sales_category === 'CASCO');
 
     // Header State
     const [channel, setChannel] = useState<SalesChannel>(order.channel || 'INTERNO');
@@ -105,7 +105,7 @@ export function OrderDetailClient({
 
     // Mapeo Rápido de Items Fijos
     const getItemId = (name: string) => catalogItems.find((c: any) => c.name === name)?.id || '';
-    const cascos = catalogItems.filter((c: any) => c.name.startsWith('P-'));
+    const cascos = catalogItems.filter((c: any) => c.sales_category === 'CASCO');
 
     // Búsqueda de precio dinámico
     const getPrice = (itemId: string) => {

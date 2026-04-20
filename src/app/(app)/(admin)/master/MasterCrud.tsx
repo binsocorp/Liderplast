@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { DataTable, Column } from '@/components/ui/DataTable';
@@ -40,11 +40,12 @@ interface MasterCrudProps {
     fields: FieldDef[];
     data: Record<string, unknown>[];
     backHref?: string;
+    autoOpen?: boolean;
 }
 
-export function MasterCrud({ title, entityTable, columns, fields, data, backHref = '/master' }: MasterCrudProps) {
+export function MasterCrud({ title, entityTable, columns, fields, data, backHref = '/master', autoOpen }: MasterCrudProps) {
     const router = useRouter();
-    const [showModal, setShowModal] = useState(false);
+    const [showModal, setShowModal] = useState(!!autoOpen);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [formData, setFormData] = useState<Record<string, unknown>>({});
     const [error, setError] = useState<string | null>(null);
@@ -59,6 +60,11 @@ export function MasterCrud({ title, entityTable, columns, fields, data, backHref
         setFormData(defaults);
         setShowModal(true);
     }
+
+    useEffect(() => {
+        if (autoOpen) openCreate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     function openEdit(row: Record<string, unknown>) {
         setEditingId(row.id as string);

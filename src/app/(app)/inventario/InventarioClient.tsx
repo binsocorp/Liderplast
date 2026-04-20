@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { Plus, ClipboardList } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { DataTable, Column } from '@/components/ui/DataTable';
-import { FilterBar, SelectFilter } from '@/components/ui/FilterBar';
+import { FilterBar } from '@/components/ui/FilterBar';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { FormSection, FormField, FormGrid } from '@/components/ui/FormSection';
@@ -29,20 +30,36 @@ interface InventoryItem {
     average_cost: number;
     is_active: boolean;
     catalog_item_id: string | null;
+    lead_time_days: number | null;
     created_at: string;
 }
 
-interface CatalogItem {
+interface FinalProduct {
     id: string;
     name: string;
 }
 
+interface BomItem {
+    id: string;
+    product_id: string;
+    material_id: string;
+    quantity_per_unit: number;
+}
+
 interface Props {
     items: InventoryItem[];
-    catalogItems: CatalogItem[];
+    finalProducts: FinalProduct[];
+    allBomItems: BomItem[];
 }
 
 const TYPE_OPTIONS = [
+    { value: 'MATERIA_PRIMA', label: 'Materia Prima' },
+    { value: 'INSUMO', label: 'Insumo' },
+    { value: 'PRODUCTO_FINAL', label: 'Producto Final' },
+];
+
+const TABS = [
+    { value: '', label: 'Todos' },
     { value: 'MATERIA_PRIMA', label: 'Materia Prima' },
     { value: 'INSUMO', label: 'Insumo' },
     { value: 'PRODUCTO_FINAL', label: 'Producto Final' },
@@ -63,7 +80,24 @@ const UNIT_OPTIONS = [
 // Component
 // -----------------------------------------------
 
-export function InventarioClient({ items, catalogItems }: Props) {
+function AlcanceBar({ current, qtyPerUnit, max }: { current: number; qtyPerUnit: number; max: number }) {
+    if (!qtyPerUnit || max === 0) return <span className="text-gray-300 text-xs">—</span>;
+    const units = current / qtyPerUnit;
+    const pct = Math.min((units / max) * 100, 100);
+    const color = pct < 25 ? 'bg-red-400' : pct < 60 ? 'bg-yellow-400' : 'bg-emerald-400';
+    return (
+        <div className="flex items-center gap-2 min-w-[120px]">
+            <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+            </div>
+            <span className="text-xs tabular-nums text-gray-600 w-12 text-right">
+                {units < 1 ? units.toLocaleString('es-AR', { maximumFractionDigits: 1 }) : Math.floor(units).toLocaleString('es-AR')} u.
+            </span>
+        </div>
+    );
+}
+
+export function InventarioClient({ items, finalProducts, allBomItems }: Props) {
     const [search, setSearch] = useState('');
     const [typeFilter, setTypeFilter] = useState('');
     const [showInactive, setShowInactive] = useState(false);
@@ -71,6 +105,12 @@ export function InventarioClient({ items, catalogItems }: Props) {
     const [editItem, setEditItem] = useState<InventoryItem | null>(null);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+
+    // Alcance reference products — default to items with "700300" in name
+    const defaultPileta = finalProducts.find(p => p.name.includes('700300'))?.id ?? finalProducts[0]?.id ?? '';
+    const defaultLoseta = finalProducts.find(p => p.name.toLowerCase().includes('loseta'))?.id ?? finalProducts[1]?.id ?? '';
+    const [piletaProductId, setPiletaProductId] = useState(defaultPileta);
+    const [losetaProductId, setLosetaProductId] = useState(defaultLoseta);
 
     // Toma de Inventario
     const [tomaOpen, setTomaOpen] = useState(false);
@@ -90,6 +130,7 @@ export function InventarioClient({ items, catalogItems }: Props) {
         last_cost: 0,
         is_active: true,
         catalog_item_id: null as string | null,
+        lead_time_days: null as number | null,
     });
 
     // Filter items
@@ -121,6 +162,7 @@ export function InventarioClient({ items, catalogItems }: Props) {
             last_cost: 0,
             is_active: true,
             catalog_item_id: null,
+            lead_time_days: null,
         });
         setError('');
         setModalOpen(true);
@@ -138,6 +180,7 @@ export function InventarioClient({ items, catalogItems }: Props) {
             last_cost: item.last_cost,
             is_active: item.is_active,
             catalog_item_id: item.catalog_item_id || null,
+            lead_time_days: item.lead_time_days ?? null,
         });
         setError('');
         setModalOpen(true);
@@ -286,6 +329,63 @@ export function InventarioClient({ items, catalogItems }: Props) {
         },
     ];
 
+    // BOM grouping for MATERIA_PRIMA tab (must be after `columns`)
+    const piletaBom = allBomItems.filter(b => b.product_id === piletaProductId);
+    const losetaBom = allBomItems.filter(b => b.product_id === losetaProductId);
+    const piletaIds = new Set(piletaBom.map(b => b.material_id));
+    const losetaIds = new Set(losetaBom.map(b => b.material_id));
+
+    const materiasPrimas = filtered.filter(i => i.type === 'MATERIA_PRIMA');
+    const piletaMaterials = materiasPrimas.filter(i => piletaIds.has(i.id));
+    const losetaMaterials = materiasPrimas.filter(i => losetaIds.has(i.id) && !piletaIds.has(i.id));
+    const otrosMaterials = materiasPrimas.filter(i => !piletaIds.has(i.id) && !losetaIds.has(i.id));
+
+    function calcMaxUnits(materials: InventoryItem[], bom: BomItem[]) {
+        const values = materials.map(m => {
+            const entry = bom.find(b => b.material_id === m.id);
+            return entry ? m.current_stock / entry.quantity_per_unit : 0;
+        });
+        return Math.max(...values, 1);
+    }
+
+    const maxPileta = calcMaxUnits(piletaMaterials, piletaBom);
+    const maxLoseta = calcMaxUnits(losetaMaterials, losetaBom);
+
+    const columnsMp: Column<InventoryItem>[] = [
+        ...columns.filter(c => c.key !== 'type'),
+        {
+            key: 'lead_time_days' as any,
+            label: 'Demora pedido',
+            render: (row) => row.lead_time_days != null
+                ? <span className="tabular-nums text-gray-600">{row.lead_time_days} d.</span>
+                : <span className="text-gray-300">—</span>,
+        },
+    ];
+
+    function makeColumnsWithAlcance(bom: BomItem[], max: number): Column<InventoryItem>[] {
+        return [
+            ...columnsMp,
+            {
+                key: 'alcance' as any,
+                label: (
+                    <span className="group relative inline-flex items-center gap-1">
+                        Alcance
+                        <svg className="w-3.5 h-3.5 text-gray-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="absolute bottom-full left-0 mb-2 px-2 py-1.5 text-xs text-white bg-gray-800 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 shadow-lg">
+                            Unidades del producto de referencia<br />que se pueden fabricar con el stock actual
+                        </span>
+                    </span>
+                ),
+                render: (row) => {
+                    const entry = bom.find(b => b.material_id === row.id);
+                    return <AlcanceBar current={row.current_stock} qtyPerUnit={entry?.quantity_per_unit ?? 0} max={max} />;
+                },
+            },
+        ];
+    }
+
     return (
         <>
             <PageHeader
@@ -296,9 +396,11 @@ export function InventarioClient({ items, catalogItems }: Props) {
                         <Button variant="secondary" onClick={openToma} icon={<ClipboardList className="w-4 h-4" />}>
                             Toma de Inventario
                         </Button>
-                        <Button onClick={openNew} icon={<Plus className="w-4 h-4" />}>
-                            Nuevo Ítem
-                        </Button>
+                        <Link href="/master/catalog?new=1">
+                            <Button icon={<Plus className="w-4 h-4" />}>
+                                Nuevo Ítem
+                            </Button>
+                        </Link>
                     </div>
                 }
             />
@@ -323,19 +425,37 @@ export function InventarioClient({ items, catalogItems }: Props) {
                 </div>
             </div>
 
+            {/* Tabs */}
+            <div className="flex gap-1 border-b border-gray-200 mb-4">
+                {TABS.map((tab) => (
+                    <button
+                        key={tab.value}
+                        onClick={() => setTypeFilter(tab.value)}
+                        className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                            typeFilter === tab.value
+                                ? 'border-primary-600 text-primary-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-800'
+                        }`}
+                    >
+                        {tab.label}
+                        <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${
+                            typeFilter === tab.value ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-500'
+                        }`}>
+                            {tab.value === ''
+                                ? items.filter(i => showInactive || i.is_active).length
+                                : items.filter(i => i.type === tab.value && (showInactive || i.is_active)).length
+                            }
+                        </span>
+                    </button>
+                ))}
+            </div>
+
             {/* Filters */}
             <FilterBar
                 searchValue={search}
                 onSearchChange={setSearch}
                 searchPlaceholder="Buscar por nombre..."
             >
-                <SelectFilter
-                    label="Tipo"
-                    value={typeFilter}
-                    onChange={setTypeFilter}
-                    options={TYPE_OPTIONS}
-                    allLabel="Todos los tipos"
-                />
                 <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
                     <input
                         type="checkbox"
@@ -348,18 +468,109 @@ export function InventarioClient({ items, catalogItems }: Props) {
             </FilterBar>
 
             {/* Table */}
-            <DataTable
-                columns={columns}
-                data={filtered}
-                keyExtractor={(row) => row.id}
-                onRowClick={openEdit}
-                emptyMessage="No hay ítems de inventario"
-                getRowClassName={(row) =>
-                    row.is_active && row.min_stock > 0 && row.current_stock < row.min_stock
-                        ? 'bg-red-50 hover:bg-red-100'
-                        : ''
-                }
-            />
+            {typeFilter === 'MATERIA_PRIMA' ? (
+                <div className="space-y-6">
+                    {/* Reference product selectors */}
+                    <div className="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 flex flex-wrap items-center gap-4">
+                        <span className="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Referencia de alcance</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium text-gray-500">Piletas</span>
+                            <select
+                                value={piletaProductId}
+                                onChange={(e) => setPiletaProductId(e.target.value)}
+                                className="text-sm border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
+                            >
+                                <option value="">— Sin referencia —</option>
+                                {finalProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </select>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium text-gray-500">Losetas</span>
+                            <select
+                                value={losetaProductId}
+                                onChange={(e) => setLosetaProductId(e.target.value)}
+                                className="text-sm border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
+                            >
+                                <option value="">— Sin referencia —</option>
+                                {finalProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </select>
+                        </div>
+                    </div>
+
+                    {piletaMaterials.length > 0 && (
+                        <div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Para Piletas</h3>
+                                <span className="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-medium">{piletaMaterials.length}</span>
+                            </div>
+                            <DataTable
+                                columns={makeColumnsWithAlcance(piletaBom, maxPileta)}
+                                data={piletaMaterials}
+                                keyExtractor={(row) => row.id}
+                                onRowClick={openEdit}
+                                emptyMessage=""
+                                getRowClassName={(row) =>
+                                    row.is_active && row.min_stock > 0 && row.current_stock < row.min_stock
+                                        ? 'bg-red-50 hover:bg-red-100' : ''
+                                }
+                            />
+                        </div>
+                    )}
+
+                    {losetaMaterials.length > 0 && (
+                        <div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Para Losetas</h3>
+                                <span className="text-xs bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full font-medium">{losetaMaterials.length}</span>
+                            </div>
+                            <DataTable
+                                columns={makeColumnsWithAlcance(losetaBom, maxLoseta)}
+                                data={losetaMaterials}
+                                keyExtractor={(row) => row.id}
+                                onRowClick={openEdit}
+                                emptyMessage=""
+                                getRowClassName={(row) =>
+                                    row.is_active && row.min_stock > 0 && row.current_stock < row.min_stock
+                                        ? 'bg-red-50 hover:bg-red-100' : ''
+                                }
+                            />
+                        </div>
+                    )}
+
+                    {otrosMaterials.length > 0 && (
+                        <div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Sin categoría</h3>
+                                <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-medium">{otrosMaterials.length}</span>
+                            </div>
+                            <DataTable
+                                columns={columnsMp}
+                                data={otrosMaterials}
+                                keyExtractor={(row) => row.id}
+                                onRowClick={openEdit}
+                                emptyMessage=""
+                                getRowClassName={(row) =>
+                                    row.is_active && row.min_stock > 0 && row.current_stock < row.min_stock
+                                        ? 'bg-red-50 hover:bg-red-100' : ''
+                                }
+                            />
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <DataTable
+                    columns={columns}
+                    data={filtered}
+                    keyExtractor={(row) => row.id}
+                    onRowClick={openEdit}
+                    emptyMessage="No hay ítems de inventario"
+                    getRowClassName={(row) =>
+                        row.is_active && row.min_stock > 0 && row.current_stock < row.min_stock
+                            ? 'bg-red-50 hover:bg-red-100'
+                            : ''
+                    }
+                />
+            )}
 
             {/* Modal Toma de Inventario */}
             <Modal
@@ -474,19 +685,15 @@ export function InventarioClient({ items, catalogItems }: Props) {
 
                 <FormSection title="Datos del ítem">
                     <FormGrid cols={2}>
-                        <FormField label="Nombre" required>
-                            <Input
-                                value={form.name}
-                                onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
-                                placeholder="Ej: Resina Poliester"
-                            />
+                        <FormField label="Nombre">
+                            <p className="px-3 py-2 text-sm font-semibold text-gray-800 bg-gray-50 border border-gray-200 rounded-xl">
+                                {form.name || '—'}
+                            </p>
                         </FormField>
-                        <FormField label="Tipo de ítem" required>
-                            <Select
-                                value={form.type}
-                                onChange={(e) => setForm(f => ({ ...f, type: e.target.value }))}
-                                options={TYPE_OPTIONS}
-                            />
+                        <FormField label="Tipo">
+                            <p className="px-3 py-2 text-sm font-semibold text-gray-800 bg-gray-50 border border-gray-200 rounded-xl">
+                                {TYPE_OPTIONS.find(o => o.value === form.type)?.label || form.type}
+                            </p>
                         </FormField>
                     </FormGrid>
 
@@ -560,16 +767,21 @@ export function InventarioClient({ items, catalogItems }: Props) {
                         )}
                     </FormGrid>
 
-                    {form.type === 'PRODUCTO_FINAL' && (
-                        <FormField label="Ítem de catálogo vinculado">
-                            <Select
-                                value={form.catalog_item_id || ''}
-                                onChange={(e) => setForm(f => ({ ...f, catalog_item_id: e.target.value || null }))}
-                                options={catalogItems.map(c => ({ value: c.id, label: c.name }))}
-                                placeholder="Seleccionar ítem del catálogo (opcional)..."
-                            />
-                        </FormField>
+                    {(form.type === 'MATERIA_PRIMA' || form.type === 'INSUMO') && (
+                        <FormGrid cols={2}>
+                            <FormField label="Demora de pedido (días)">
+                                <Input
+                                    type="number"
+                                    value={form.lead_time_days ?? ''}
+                                    onChange={(e) => setForm(f => ({ ...f, lead_time_days: e.target.value !== '' ? Number(e.target.value) : null }))}
+                                    min={0}
+                                    step="1"
+                                    placeholder="Ej: 7"
+                                />
+                            </FormField>
+                        </FormGrid>
                     )}
+
                 </FormSection>
             </Modal>
         </>

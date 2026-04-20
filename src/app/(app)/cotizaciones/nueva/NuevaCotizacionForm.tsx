@@ -78,7 +78,7 @@ export function NuevaCotizacionForm({
 
     // Mapeo rápido de ítems
     const getItemId = (name: string) => catalogItems.find((c: any) => c.name === name)?.id || '';
-    const cascos = catalogItems.filter((c: any) => c.name.startsWith('P-'));
+    const cascos = catalogItems.filter((c: any) => c.sales_category === 'CASCO');
 
     // Precio dinámico según canal
     const getPrice = (itemId: string) => {

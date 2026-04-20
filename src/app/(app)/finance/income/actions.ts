@@ -76,9 +76,11 @@ export async function createIncome(formData: any) {
         // invoice_type: solo incluir si tiene valor (columna agregada en Phase 13)
         if (formData.invoice_type) insertPayload.invoice_type = formData.invoice_type;
 
-        const { error: insertError } = await (supabase
+        const { data: income, error: insertError } = await (supabase
             .from('finance_incomes') as any)
-            .insert(insertPayload);
+            .insert(insertPayload)
+            .select('id')
+            .single();
 
         if (insertError) return { error: insertError.message };
 
@@ -87,7 +89,23 @@ export async function createIncome(formData: any) {
             await recalcOrderPayment(supabase, formData.order_id);
         }
 
+        // 3. Sync to account_movements
+        if (insertPayload.payment_method_id) {
+            await (supabase.from('account_movements') as any)
+                .insert({
+                    payment_method_id: insertPayload.payment_method_id,
+                    movement_type: 'INGRESO',
+                    amount,
+                    description: insertPayload.description || null,
+                    movement_date: insertPayload.issue_date,
+                    source_id: income.id,
+                    source_type: 'income',
+                    created_by_user_id: user.id,
+                } as any);
+        }
+
         revalidatePath('/finance/income');
+        revalidatePath('/finance/caja');
         if (formData.order_id) {
             revalidatePath('/orders');
         }
@@ -150,7 +168,46 @@ export async function updateIncome(id: string, formData: any) {
         await recalcOrderPayment(supabase, newOrderId);
     }
 
+    // 4. Sync account_movements
+    if (formData.payment_method_id) {
+        const { data: existing } = await (supabase.from('account_movements') as any)
+            .select('id')
+            .eq('source_id', id)
+            .eq('source_type', 'income')
+            .maybeSingle();
+
+        if (existing) {
+            await (supabase.from('account_movements') as any)
+                .update({
+                    payment_method_id: formData.payment_method_id,
+                    amount,
+                    description: formData.description || null,
+                    movement_date: formData.issue_date,
+                } as any)
+                .eq('id', existing.id);
+        } else {
+            const { data: { user } } = await supabase.auth.getUser();
+            await (supabase.from('account_movements') as any)
+                .insert({
+                    payment_method_id: formData.payment_method_id,
+                    movement_type: 'INGRESO',
+                    amount,
+                    description: formData.description || null,
+                    movement_date: formData.issue_date,
+                    source_id: id,
+                    source_type: 'income',
+                    created_by_user_id: user?.id,
+                } as any);
+        }
+    } else {
+        await (supabase.from('account_movements') as any)
+            .delete()
+            .eq('source_id', id)
+            .eq('source_type', 'income');
+    }
+
     revalidatePath('/finance/income');
+    revalidatePath('/finance/caja');
     revalidatePath('/orders');
     return { success: true };
 }
@@ -169,7 +226,13 @@ export async function deleteIncome(id: string) {
 
     if (fetchError || !income) return { error: 'Ingreso no encontrado' };
 
-    // 2. Delete income
+    // 2. Delete linked account_movement first
+    await (supabase.from('account_movements') as any)
+        .delete()
+        .eq('source_id', id)
+        .eq('source_type', 'income');
+
+    // 3. Delete income
     const { error: delError } = await (supabase
         .from('finance_incomes') as any)
         .delete()
@@ -177,12 +240,13 @@ export async function deleteIncome(id: string) {
 
     if (delError) return { error: delError.message };
 
-    // 3. If was linked to order, recalc
+    // 4. If was linked to order, recalc
     if (income.income_type === 'VENTA' && income.order_id) {
         await recalcOrderPayment(supabase, income.order_id);
     }
 
     revalidatePath('/finance/income');
+    revalidatePath('/finance/caja');
     if (income.order_id) {
         revalidatePath('/orders');
     }

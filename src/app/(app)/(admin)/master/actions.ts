@@ -24,11 +24,19 @@ type EntityTable =
     | 'reseller_price_lists'
     | 'reseller_prices';
 
+function sanitizeCatalogItem(data: Record<string, unknown>) {
+    const result = { ...data };
+    if (result.inventory_type === '' || result.inventory_type === undefined) result.inventory_type = null;
+    if (result.sales_category === '' || result.sales_category === undefined) result.sales_category = null;
+    return result;
+}
+
 export async function createEntity(table: EntityTable, data: Record<string, unknown>) {
     const supabase = await createClient();
+    const payload = table === 'catalog_items' ? sanitizeCatalogItem(data) : data;
     const { data: result, error } = await (supabase
         .from(table as any)
-        .insert(data as any)
+        .insert(payload as any)
         .select()
         .single() as any);
 
@@ -43,9 +51,10 @@ export async function createEntity(table: EntityTable, data: Record<string, unkn
 
 export async function updateEntity(table: EntityTable, id: string, data: Record<string, unknown>) {
     const supabase = await createClient();
+    const payload = table === 'catalog_items' ? sanitizeCatalogItem(data) : data;
     const { error } = await (supabase
         .from(table as any)
-        .update(data as any)
+        .update(payload as any)
         .eq('id', id) as any);
 
     if (error) {

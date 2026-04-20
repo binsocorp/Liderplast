@@ -4,7 +4,7 @@ import { IncomeClient } from './IncomeClient';
 export default async function IncomePage({
     searchParams
 }: {
-    searchParams: { orderId?: string }
+    searchParams: { orderId?: string; new?: string }
 }) {
     const supabase = await createClient();
 
@@ -57,6 +57,7 @@ export default async function IncomePage({
             orders={orders || []}
             paymentMethods={paymentMethods || []}
             preloadedOrderId={searchParams.orderId}
+            autoOpen={searchParams.new === '1'}
         />
     );
 }

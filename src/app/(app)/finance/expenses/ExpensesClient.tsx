@@ -31,12 +31,13 @@ export function ExpensesClient({
     categories,
     subcategories,
     paymentMethods,
-    vendors
+    vendors,
+    autoOpen
 }: any) {
     const router = useRouter();
 
     // Modal
-    const [showModal, setShowModal] = useState(false);
+    const [showModal, setShowModal] = useState(!!autoOpen);
     const [editingExpense, setEditingExpense] = useState<any>(null);
 
     // ── Date slicer ──

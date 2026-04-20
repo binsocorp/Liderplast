@@ -33,8 +33,8 @@ export function PricesClient({ prices, provinces, catalogItems }: PricesClientPr
 
     // Let's categorize catalog items (Cascos vs Services/Optionals)
     const sortedItems = useMemo(() => {
-        const cascos = catalogItems.filter(c => c.name.startsWith('P-')).sort((a, b) => a.name.localeCompare(b.name));
-        const others = catalogItems.filter(c => !c.name.startsWith('P-')).sort((a, b) => a.name.localeCompare(b.name));
+        const cascos = catalogItems.filter((c: any) => c.sales_category === 'CASCO').sort((a, b) => a.name.localeCompare(b.name));
+        const others = catalogItems.filter((c: any) => c.sales_category !== 'CASCO').sort((a, b) => a.name.localeCompare(b.name));
         return [...cascos, ...others];
     }, [catalogItems]);
 

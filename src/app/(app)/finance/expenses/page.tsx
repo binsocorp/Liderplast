@@ -1,7 +1,11 @@
 import { createClient } from '@/lib/supabase/server';
 import { ExpensesClient } from './ExpensesClient';
 
-export default async function ExpensesPage() {
+export default async function ExpensesPage({
+    searchParams
+}: {
+    searchParams: { new?: string }
+}) {
     const supabase = await createClient();
 
     // Fetch expenses with all relations
@@ -29,6 +33,7 @@ export default async function ExpensesPage() {
             subcategories={subcategories || []}
             paymentMethods={paymentMethods || []}
             vendors={vendors || []}
+            autoOpen={searchParams.new === '1'}
         />
     );
 }

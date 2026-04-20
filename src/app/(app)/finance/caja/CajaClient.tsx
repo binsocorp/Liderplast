@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, ArrowLeftRight, Wallet, TrendingUp, TrendingDown, X, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { Plus, ArrowLeftRight, Wallet, TrendingDown, X, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { createMovement, createTransfer, deleteMovement } from './actions';
@@ -21,7 +22,7 @@ const MOVEMENT_LABELS: Record<string, { label: string; sign: number; cls: string
     AJUSTE:           { label: 'Ajuste',        sign: +1, cls: 'text-violet-700 bg-violet-50' },
 };
 
-type Mode = 'INGRESO' | 'EGRESO' | 'SALDO_INICIAL' | 'AJUSTE';
+type Mode = 'SALDO_INICIAL' | 'AJUSTE';
 
 interface PaymentMethod { id: string; name: string; }
 interface Movement {
@@ -143,12 +144,16 @@ export function CajaClient({ paymentMethods, movements }: {
                         <Button variant="secondary" onClick={() => { setError(''); setShowTransfer(true); }} icon={<ArrowLeftRight className="w-4 h-4" />}>
                             Transferir
                         </Button>
-                        <Button variant="secondary" onClick={() => openMovement('EGRESO')} icon={<TrendingDown className="w-4 h-4" />}>
-                            Egreso
-                        </Button>
-                        <Button onClick={() => openMovement('INGRESO')} icon={<Plus className="w-4 h-4" />}>
-                            Ingreso
-                        </Button>
+                        <Link href="/finance/expenses?new=1">
+                            <Button variant="secondary" icon={<TrendingDown className="w-4 h-4" />}>
+                                Egreso
+                            </Button>
+                        </Link>
+                        <Link href="/finance/income?new=1">
+                            <Button icon={<Plus className="w-4 h-4" />}>
+                                Ingreso
+                            </Button>
+                        </Link>
                     </div>
                 }
             />
@@ -279,9 +284,7 @@ export function CajaClient({ paymentMethods, movements }: {
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
                         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                             <h2 className="text-lg font-bold text-gray-900">
-                                {mode === 'INGRESO' ? 'Registrar Ingreso' :
-                                 mode === 'EGRESO' ? 'Registrar Egreso' :
-                                 mode === 'SALDO_INICIAL' ? 'Saldo Inicial' : 'Ajuste de Caja'}
+                                {mode === 'SALDO_INICIAL' ? 'Saldo Inicial' : 'Ajuste de Caja'}
                             </h2>
                             <button onClick={() => setShowModal(false)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
                                 <X className="w-5 h-5" />

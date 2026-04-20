@@ -35,10 +35,10 @@ const INVOICE_TYPE_LABELS: Record<string, string> = {
     'RECIBO': 'Recibo',
 };
 
-export function IncomeClient({ incomes, orders, paymentMethods, preloadedOrderId: initialOrderId }: any) {
+export function IncomeClient({ incomes, orders, paymentMethods, preloadedOrderId: initialOrderId, autoOpen }: any) {
     const router = useRouter();
 
-    const [showModal, setShowModal] = useState(!!initialOrderId);
+    const [showModal, setShowModal] = useState(!!initialOrderId || !!autoOpen);
     const [editingIncome, setEditingIncome] = useState<any>(null);
     const [preloadedOrderId, setPreloadedOrderId] = useState<string>(initialOrderId || '');
 
