@@ -11,6 +11,7 @@ import { FormField, FormGrid } from '@/components/ui/FormSection';
 import { Input, Select, Textarea } from '@/components/ui/FormInputs';
 import { createSubscription } from './actions';
 import type { UserSubscription, BillingCycle, SubscriptionStatus } from '@/lib/types/database';
+import { parseLocalDate } from '@/lib/utils/dates';
 
 interface SubscriptionRow extends UserSubscription {
     expenses: { amount: number }[];
@@ -87,7 +88,7 @@ export function SubscriptionsClient({ subscriptions }: SubscriptionsClientProps)
         {
             key: 'next_billing_date',
             label: 'Próx. Cobro',
-            render: (row) => row.next_billing_date ? new Intl.DateTimeFormat('es-AR').format(new Date(row.next_billing_date)) : '-',
+            render: (row) => row.next_billing_date ? new Intl.DateTimeFormat('es-AR').format(parseLocalDate(row.next_billing_date)) : '-',
         },
         {
             key: 'total_spent',

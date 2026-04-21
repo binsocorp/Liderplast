@@ -13,13 +13,14 @@ import { KPICard, KPIContainer } from '@/components/dashboard/KPICard';
 import { ColumnFilter } from '@/components/ui/ColumnFilter';
 import { NewIncomeModal } from './NewIncomeModal';
 import { deleteIncome } from './actions';
+import { parseLocalDate, formatLocalDate, todayLocalString, startOfMonthLocalString } from '@/lib/utils/dates';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899'];
 
 const formatCurrency = (val: number) =>
-    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(val);
+    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
 
-const formatDate = (d: string) => new Intl.DateTimeFormat('es-AR').format(new Date(d));
+const formatDate = (d: string) => formatLocalDate(d);
 
 const INCOME_TYPES: Record<string, string> = {
     'VENTA': 'Ingreso por Venta',
@@ -43,23 +44,20 @@ export function IncomeClient({ incomes, orders, paymentMethods, preloadedOrderId
     const [preloadedOrderId, setPreloadedOrderId] = useState<string>(initialOrderId || '');
 
     // Filters
-    const now = new Date();
-    const [dateFrom, setDateFrom] = useState(
-        new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-    );
-    const [dateTo, setDateTo] = useState(now.toISOString().split('T')[0]);
+    const [dateFrom, setDateFrom] = useState(startOfMonthLocalString());
+    const [dateTo, setDateTo] = useState(todayLocalString());
 
     const [search, setSearch] = useState('');
     const [typeFilter, setTypeFilter] = useState('');
     const [paymentMethodFilter, setPaymentMethodFilter] = useState('');
 
     const filtered = useMemo(() => {
-        const dFrom = new Date(dateFrom);
-        const dTo = new Date(dateTo);
+        const dFrom = parseLocalDate(dateFrom);
+        const dTo = parseLocalDate(dateTo);
         dTo.setHours(23, 59, 59);
 
         return incomes.filter((e: any) => {
-            const d = new Date(e.issue_date);
+            const d = parseLocalDate(e.issue_date);
             if (d < dFrom || d > dTo) return false;
             if (typeFilter && e.income_type !== typeFilter) return false;
             if (paymentMethodFilter && e.payment_method_id !== paymentMethodFilter) return false;
@@ -75,15 +73,16 @@ export function IncomeClient({ incomes, orders, paymentMethods, preloadedOrderId
 
     // KPIs
     const stats = useMemo(() => {
+        const now = new Date();
         const currentMonth = now.getMonth();
         const currentYear = now.getFullYear();
 
         const monthIncomes = incomes.filter((i: any) => {
-            const d = new Date(i.issue_date);
+            const d = parseLocalDate(i.issue_date);
             return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
         });
 
-        const todayStr = now.toISOString().split('T')[0];
+        const todayStr = todayLocalString();
         const dayIncomes = incomes.filter((i: any) => i.issue_date.startsWith(todayStr));
 
         const monthTotal = monthIncomes.reduce((acc: number, cur: any) => acc + Number(cur.amount), 0);

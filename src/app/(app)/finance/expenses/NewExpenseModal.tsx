@@ -7,6 +7,7 @@ import { Input, Select, Textarea, Checkbox } from '@/components/ui/FormInputs';
 import { FormField, FormGrid } from '@/components/ui/FormSection';
 import { createExpense, updateExpense } from './actions';
 import { useRouter } from 'next/navigation';
+import { todayLocalString } from '@/lib/utils/dates';
 
 export function NewExpenseModal({
     open,
@@ -44,7 +45,7 @@ export function NewExpenseModal({
                 setVendorId(expense.vendor_id || '');
                 setNotes(expense.notes || '');
             } else {
-                setIssueDate(new Date().toISOString().split('T')[0]);
+                setIssueDate(todayLocalString());
                 setAmount('');
                 setCategoryId('');
                 setSubcategoryId('');
@@ -147,6 +148,8 @@ export function NewExpenseModal({
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
                                 placeholder="0.00"
+                                step="0.01"
+                                min="0"
                             />
                         </div>
                     </FormField>

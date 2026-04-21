@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { X, Search } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { createIncome, updateIncome } from './actions';
+import { todayLocalString } from '@/lib/utils/dates';
 
 interface ModalProps {
     open: boolean;
@@ -36,7 +37,7 @@ export function NewIncomeModal({ open, onClose, orders, paymentMethods, editingI
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
 
-    const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
+    const [issueDate, setIssueDate] = useState(todayLocalString());
     const [incomeType, setIncomeType] = useState('VENTA');
     const [orderId, setOrderId] = useState('');
     const [amount, setAmount] = useState('');
@@ -50,7 +51,7 @@ export function NewIncomeModal({ open, onClose, orders, paymentMethods, editingI
     // Populate form when editing or preloading from order detail
     useEffect(() => {
         if (editingIncome) {
-            setIssueDate(editingIncome.issue_date || new Date().toISOString().split('T')[0]);
+            setIssueDate(editingIncome.issue_date || todayLocalString());
             setIncomeType(editingIncome.income_type || 'VENTA');
             setOrderId(editingIncome.order_id || '');
             setAmount(String(editingIncome.amount || ''));
@@ -59,7 +60,7 @@ export function NewIncomeModal({ open, onClose, orders, paymentMethods, editingI
             setDescription(editingIncome.description || '');
             setNotes(editingIncome.notes || '');
         } else {
-            setIssueDate(new Date().toISOString().split('T')[0]);
+            setIssueDate(todayLocalString());
             setIncomeType('VENTA');
             setOrderId(preloadedOrderId || '');
             setAmount('');

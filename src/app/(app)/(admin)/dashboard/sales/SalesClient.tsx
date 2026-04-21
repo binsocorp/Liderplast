@@ -8,6 +8,7 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
     Cell, PieChart, Pie, Legend
 } from 'recharts';
+import { parseLocalDate, todayLocalString, startOfMonthLocalString } from '@/lib/utils/dates';
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6'];
 
@@ -18,8 +19,8 @@ export default function SalesClient({
     catalogItems
 }: any) {
     const [dateRange, setDateRange] = useState({
-        from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-        to: new Date().toISOString().split('T')[0]
+        from: startOfMonthLocalString(),
+        to: todayLocalString()
     });
 
     const formatCurrency = (val: number) => {
@@ -31,8 +32,8 @@ export default function SalesClient({
     };
 
     const filteredOrders = useMemo(() => {
-        const dFrom = new Date(dateRange.from);
-        const dTo = new Date(dateRange.to);
+        const dFrom = parseLocalDate(dateRange.from);
+        const dTo = parseLocalDate(dateRange.to);
         dTo.setHours(23, 59, 59);
 
         return orders.filter((o: any) => {

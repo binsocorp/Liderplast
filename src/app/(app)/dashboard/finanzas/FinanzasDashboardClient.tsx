@@ -8,6 +8,7 @@ import {
 } from 'recharts';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { KPICard, KPIContainer } from '@/components/dashboard/KPICard';
+import { parseLocalDate } from '@/lib/utils/dates';
 
 const formatCurrency = (val: number) =>
     new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(val);
@@ -86,7 +87,7 @@ export function FinanzasDashboardClient({ paymentMethods, movements, incomes, ex
     }, [incomes, expenses]);
 
     const daysSince = (dateStr: string) =>
-        Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+        Math.floor((Date.now() - parseLocalDate(dateStr).getTime()) / 86400000);
 
     return (
         <>

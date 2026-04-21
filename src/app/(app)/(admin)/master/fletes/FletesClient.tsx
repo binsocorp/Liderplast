@@ -2,6 +2,7 @@
 
 import { MasterCrud } from '../MasterCrud';
 import { Badge } from '@/components/ui/Badge';
+import { parseLocalDate } from '@/lib/utils/dates';
 
 export function FletesClient({ trips }: { trips: any[] }) {
     return (
@@ -15,7 +16,7 @@ export function FletesClient({ trips }: { trips: any[] }) {
                 {
                     key: 'date',
                     label: 'Fecha',
-                    render: (row) => row.date ? new Intl.DateTimeFormat('es-AR').format(new Date(row.date as string)) : '-'
+                    render: (row) => row.date ? new Intl.DateTimeFormat('es-AR').format(parseLocalDate(row.date as string)) : '-'
                 },
                 {
                     key: 'status',

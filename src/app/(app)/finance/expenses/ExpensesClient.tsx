@@ -14,14 +14,15 @@ import { KPICard, KPIContainer } from '@/components/dashboard/KPICard';
 import { ColumnFilter } from '@/components/ui/ColumnFilter';
 import { NewExpenseModal } from './NewExpenseModal';
 import { toggleExpenseStatus, deleteExpense } from './actions';
+import { parseLocalDate, formatLocalDate, todayLocalString, startOfMonthLocalString } from '@/lib/utils/dates';
 
 // ───── Palette ─────
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4', '#14b8a6', '#f97316'];
 
 const formatCurrency = (val: number) =>
-    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(val);
+    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
 
-const formatDate = (d: string) => new Intl.DateTimeFormat('es-AR').format(new Date(d));
+const formatDate = (d: string) => formatLocalDate(d);
 
 // ──────────────────────────────────────────────────
 // Main Component
@@ -41,11 +42,8 @@ export function ExpensesClient({
     const [editingExpense, setEditingExpense] = useState<any>(null);
 
     // ── Date slicer ──
-    const now = new Date();
-    const [dateFrom, setDateFrom] = useState(
-        new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-    );
-    const [dateTo, setDateTo] = useState(now.toISOString().split('T')[0]);
+    const [dateFrom, setDateFrom] = useState(startOfMonthLocalString());
+    const [dateTo, setDateTo] = useState(todayLocalString());
 
     // ── Column filters ──
     const [search, setSearch] = useState('');
@@ -57,12 +55,12 @@ export function ExpensesClient({
 
     // ── Filtered Data ──
     const filtered = useMemo(() => {
-        const dFrom = new Date(dateFrom);
-        const dTo = new Date(dateTo);
+        const dFrom = parseLocalDate(dateFrom);
+        const dTo = parseLocalDate(dateTo);
         dTo.setHours(23, 59, 59);
 
         let result = expenses.filter((e: any) => {
-            const d = new Date(e.issue_date);
+            const d = parseLocalDate(e.issue_date);
             if (d < dFrom || d > dTo) return false;
             if (onlyPending && e.status !== 'PENDIENTE') return false;
             if (statusFilter && e.status !== statusFilter) return false;
@@ -78,7 +76,7 @@ export function ExpensesClient({
         // Sort by age (oldest first) when onlyPending is active
         if (onlyPending) {
             result = [...result].sort((a: any, b: any) =>
-                new Date(a.issue_date).getTime() - new Date(b.issue_date).getTime()
+                parseLocalDate(a.issue_date).getTime() - parseLocalDate(b.issue_date).getTime()
             );
         }
         return result;
@@ -308,7 +306,7 @@ export function ExpensesClient({
                             ) : (
                                 filtered.map((r: any) => {
                                     const daysPending = r.status === 'PENDIENTE'
-                                        ? Math.floor((Date.now() - new Date(r.issue_date).getTime()) / 86400000)
+                                        ? Math.floor((Date.now() - parseLocalDate(r.issue_date).getTime()) / 86400000)
                                         : 0;
                                     const isOverdue = daysPending > 30;
                                     return (

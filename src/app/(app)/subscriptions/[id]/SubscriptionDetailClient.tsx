@@ -12,6 +12,7 @@ import { DataTable, Column } from '@/components/ui/DataTable';
 import { Trash2, Save } from 'lucide-react';
 import { updateSubscription, deleteSubscription, addSubscriptionExpense, removeSubscriptionExpense } from '../actions';
 import type { UserSubscription, SubscriptionExpense, BillingCycle, SubscriptionStatus } from '@/lib/types/database';
+import { parseLocalDate, todayLocalString } from '@/lib/utils/dates';
 
 interface SubscriptionDetailClientProps {
     subscription: UserSubscription & { expenses: SubscriptionExpense[] };
@@ -33,7 +34,7 @@ export function SubscriptionDetailClient({ subscription }: SubscriptionDetailCli
     // Expense modal
     const [showExpenseModal, setShowExpenseModal] = useState(false);
     const [expenseAmount, setExpenseAmount] = useState(String(subscription.amount));
-    const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
+    const [expenseDate, setExpenseDate] = useState(todayLocalString());
     const [expenseNotes, setExpenseNotes] = useState('');
 
     async function handleSave() {
@@ -75,7 +76,7 @@ export function SubscriptionDetailClient({ subscription }: SubscriptionDetailCli
         {
             key: 'expense_date',
             label: 'Fecha',
-            render: (row) => new Intl.DateTimeFormat('es-AR').format(new Date(row.expense_date)),
+            render: (row) => new Intl.DateTimeFormat('es-AR').format(parseLocalDate(row.expense_date)),
         },
         {
             key: 'amount',

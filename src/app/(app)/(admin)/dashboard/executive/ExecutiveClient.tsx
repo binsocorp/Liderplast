@@ -9,6 +9,7 @@ import {
     BarChart, Bar, Cell, PieChart, Pie, Legend, AreaChart, Area
 } from 'recharts';
 import type { Order, OrderItem, FinanceExpense, FinanceIncome } from '@/lib/types/database';
+import { parseLocalDate, formatLocalDate, todayLocalString, startOfMonthLocalString } from '@/lib/utils/dates';
 
 interface OrderWithItems extends Order {
     items: OrderItem[];
@@ -36,8 +37,8 @@ export default function ExecutiveClient({
 }: ExecutiveClientProps) {
     // Filters State
     const [dateRange, setDateRange] = useState({
-        from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-        to: new Date().toISOString().split('T')[0]
+        from: startOfMonthLocalString(),
+        to: todayLocalString()
     });
     const [filterSeller, setFilterSeller] = useState('');
     const [filterProvince, setFilterProvince] = useState('');
@@ -54,8 +55,8 @@ export default function ExecutiveClient({
 
     // Filtered Data
     const filteredData = useMemo(() => {
-        const dFrom = new Date(dateRange.from);
-        const dTo = new Date(dateRange.to);
+        const dFrom = parseLocalDate(dateRange.from);
+        const dTo = parseLocalDate(dateRange.to);
         dTo.setHours(23, 59, 59);
 
         const fOrders = orders.filter(o => {
@@ -68,12 +69,12 @@ export default function ExecutiveClient({
         });
 
         const fExpenses = expenses.filter(e => {
-            const d = new Date(e.issue_date);
+            const d = parseLocalDate(e.issue_date);
             return d >= dFrom && d <= dTo;
         });
 
         const fIncome = income.filter(i => {
-            const d = new Date(i.issue_date);
+            const d = parseLocalDate(i.issue_date);
             return d >= dFrom && d <= dTo;
         });
 
@@ -182,7 +183,7 @@ export default function ExecutiveClient({
                 type: 'EXPENSE'
             }))
         ];
-        return items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
+        return items.sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime()).slice(0, 5);
     }, [filteredData]);
     return (
         <div className="pb-10">
@@ -347,7 +348,7 @@ export default function ExecutiveClient({
                                     </div>
                                     <div>
                                         <p className="text-xs font-bold text-gray-900 group-hover:text-primary-600 transition-colors">{tx.description}</p>
-                                        <p className="text-[10px] text-gray-400 font-medium capitalize">{tx.category} • {new Date(tx.date).toLocaleDateString('es-AR')}</p>
+                                        <p className="text-[10px] text-gray-400 font-medium capitalize">{tx.category} • {formatLocalDate(tx.date)}</p>
                                     </div>
                                 </div>
                                 <div className={`text-xs font-black ${tx.type === 'INCOME' ? 'text-green-600' : 'text-danger-600'}`}>

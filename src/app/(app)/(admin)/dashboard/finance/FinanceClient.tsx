@@ -9,6 +9,7 @@ import {
     BarChart, Bar, Cell, PieChart, Pie, Legend, AreaChart, Area
 } from 'recharts';
 import type { FinanceExpense, FinanceIncome, FinanceCategory, FinanceIncomeCategory } from '@/lib/types/database';
+import { parseLocalDate, todayLocalString, startOfMonthLocalString } from '@/lib/utils/dates';
 
 interface FinanceClientProps {
     expenses: any[];
@@ -26,8 +27,8 @@ export default function FinanceClient({
     incomeCategories
 }: FinanceClientProps) {
     const [dateRange, setDateRange] = useState({
-        from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-        to: new Date().toISOString().split('T')[0]
+        from: startOfMonthLocalString(),
+        to: todayLocalString()
     });
 
     const formatCurrency = (val: number) => {
@@ -40,17 +41,17 @@ export default function FinanceClient({
 
     // Filtered Data
     const filteredData = useMemo(() => {
-        const dFrom = new Date(dateRange.from);
-        const dTo = new Date(dateRange.to);
+        const dFrom = parseLocalDate(dateRange.from);
+        const dTo = parseLocalDate(dateRange.to);
         dTo.setHours(23, 59, 59);
 
         const fExpenses = expenses.filter(e => {
-            const d = new Date(e.issue_date);
+            const d = parseLocalDate(e.issue_date);
             return d >= dFrom && d <= dTo;
         });
 
         const fIncome = income.filter(i => {
-            const d = new Date(i.issue_date);
+            const d = parseLocalDate(i.issue_date);
             return d >= dFrom && d <= dTo;
         });
 
