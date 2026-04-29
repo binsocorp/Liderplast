@@ -11,6 +11,8 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { KPICard, KPIContainer } from '@/components/dashboard/KPICard';
 import { ColumnFilter } from '@/components/ui/ColumnFilter';
+import { Pagination } from '@/components/ui/Pagination';
+import { SegmentedDateFilter } from '@/components/ui/SegmentedDateFilter';
 import { NewIncomeModal } from './NewIncomeModal';
 import { deleteIncome } from './actions';
 import { parseLocalDate, formatLocalDate, todayLocalString, startOfMonthLocalString } from '@/lib/utils/dates';
@@ -36,12 +38,23 @@ const INVOICE_TYPE_LABELS: Record<string, string> = {
     'RECIBO': 'Recibo',
 };
 
-export function IncomeClient({ incomes, orders, paymentMethods, preloadedOrderId: initialOrderId, autoOpen }: any) {
+export function IncomeClient({ incomes, orders, paymentMethods, preloadedOrderId: initialOrderId, autoOpen, openId }: any) {
     const router = useRouter();
 
     const [showModal, setShowModal] = useState(!!initialOrderId || !!autoOpen);
     const [editingIncome, setEditingIncome] = useState<any>(null);
     const [preloadedOrderId, setPreloadedOrderId] = useState<string>(initialOrderId || '');
+
+    useEffect(() => {
+        if (openId) {
+            const income = incomes.find((i: any) => i.id === openId);
+            if (income) {
+                setEditingIncome(income);
+                setShowModal(true);
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [openId]);
 
     // Filters
     const [dateFrom, setDateFrom] = useState(startOfMonthLocalString());
@@ -50,6 +63,8 @@ export function IncomeClient({ incomes, orders, paymentMethods, preloadedOrderId
     const [search, setSearch] = useState('');
     const [typeFilter, setTypeFilter] = useState('');
     const [paymentMethodFilter, setPaymentMethodFilter] = useState('');
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(20);
 
     const filtered = useMemo(() => {
         const dFrom = parseLocalDate(dateFrom);
@@ -70,6 +85,12 @@ export function IncomeClient({ incomes, orders, paymentMethods, preloadedOrderId
             return true;
         });
     }, [incomes, dateFrom, dateTo, search, typeFilter, paymentMethodFilter]);
+
+    useEffect(() => { setPage(1); }, [filtered]);
+
+    const paged = useMemo(() =>
+        filtered.slice((page - 1) * pageSize, page * pageSize),
+        [filtered, page, pageSize]);
 
     // KPIs
     const stats = useMemo(() => {
@@ -157,14 +178,14 @@ export function IncomeClient({ incomes, orders, paymentMethods, preloadedOrderId
             />
 
             <div className="bg-white/70 backdrop-blur-sm border border-gray-200/60 rounded-2xl p-4 mb-6 flex flex-wrap items-center gap-4 shadow-sm">
-                <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Período</span>
-                    <div className="flex items-center bg-gray-100 rounded-xl p-1">
-                        <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="bg-transparent border-none text-xs font-bold text-gray-700 focus:ring-0 px-2 py-1" />
-                        <span className="text-gray-400 text-[10px] font-black mx-1">—</span>
-                        <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="bg-transparent border-none text-xs font-bold text-gray-700 focus:ring-0 px-2 py-1" />
-                    </div>
-                </div>
+                <SegmentedDateFilter
+                    dateFrom={dateFrom}
+                    dateTo={dateTo}
+                    onChange={(from, to) => {
+                        setDateFrom(from);
+                        setDateTo(to);
+                    }}
+                />
 
                 <div className="relative flex-1 min-w-[200px]">
                     <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por descripción o cliente..." className="w-full pl-9 pr-3 py-2 text-sm bg-gray-100 border-none rounded-xl focus:ring-2 focus:ring-primary-500/20 transition-all font-medium text-gray-700 placeholder:text-gray-400" />
@@ -262,14 +283,14 @@ export function IncomeClient({ incomes, orders, paymentMethods, preloadedOrderId
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
-                            {filtered.length === 0 ? (
+                            {paged.length === 0 ? (
                                 <tr>
                                     <td colSpan={7} className="px-4 py-12 text-center text-gray-400 font-medium">
                                         No hay ingresos registrados con los filtros actuales.
                                     </td>
                                 </tr>
                             ) : (
-                                filtered.map((r: any) => (
+                                paged.map((r: any) => (
                                     <tr key={r.id} className="hover:bg-gray-50/50 transition-colors">
                                         <td className="px-4 py-3 text-gray-600 font-medium tabular-nums">{formatDate(r.issue_date)}</td>
                                         <td className="px-4 py-3 font-semibold text-gray-800">
@@ -327,6 +348,13 @@ export function IncomeClient({ incomes, orders, paymentMethods, preloadedOrderId
                         )}
                     </table>
                 </div>
+                <Pagination
+                    page={page}
+                    pageSize={pageSize}
+                    total={filtered.length}
+                    onPageChange={setPage}
+                    onPageSizeChange={setPageSize}
+                />
             </div>
 
             {showModal && (

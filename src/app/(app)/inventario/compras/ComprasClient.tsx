@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { DataTable, Column } from '@/components/ui/DataTable';
 import { FilterBar, SelectFilter } from '@/components/ui/FilterBar';
+import { SegmentedDateFilter } from '@/components/ui/SegmentedDateFilter';
+import { Pagination } from '@/components/ui/Pagination';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { FormSection, FormField, FormGrid } from '@/components/ui/FormSection';
@@ -106,6 +108,8 @@ export function ComprasClient({ purchases, items, suppliers, paymentMethods }: P
     const [linkSupplierId, setLinkSupplierId] = useState('');
     const [linkSaving, setLinkSaving] = useState(false);
     const [linkError, setLinkError] = useState('');
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(20);
 
     // New purchase form
     const [form, setForm] = useState({
@@ -123,7 +127,7 @@ export function ComprasClient({ purchases, items, suppliers, paymentMethods }: P
     const unlinked = purchases.filter(p => !p.supplier_id && p.status === 'CONFIRMADA');
 
     // Filter
-    const filtered = purchases.filter((p) => {
+    const filtered = useMemo(() => purchases.filter((p) => {
         if (statusFilter && p.status !== statusFilter) return false;
         if (dateFrom && p.purchase_date < dateFrom) return false;
         if (dateTo && p.purchase_date > dateTo) return false;
@@ -136,7 +140,13 @@ export function ComprasClient({ purchases, items, suppliers, paymentMethods }: P
             );
         }
         return true;
-    });
+    }), [purchases, search, statusFilter, dateFrom, dateTo]);
+
+    useEffect(() => { setPage(1); }, [filtered]);
+
+    const paged = useMemo(() =>
+        filtered.slice((page - 1) * pageSize, page * pageSize),
+        [filtered, page, pageSize]);
 
     // Supplier summary (by FK name, then fallback to supplier_name)
     const supplierTotals = purchases
@@ -392,33 +402,33 @@ export function ComprasClient({ purchases, items, suppliers, paymentMethods }: P
                     ]}
                     allLabel="Todos los estados"
                 />
-                <div className="flex items-center gap-2">
-                    <Input
-                        type="date"
-                        value={dateFrom}
-                        onChange={(e) => setDateFrom(e.target.value)}
-                        uiSize="sm"
-                        className="w-auto"
-                    />
-                    <span className="text-gray-400 text-sm">—</span>
-                    <Input
-                        type="date"
-                        value={dateTo}
-                        onChange={(e) => setDateTo(e.target.value)}
-                        uiSize="sm"
-                        className="w-auto"
-                    />
-                </div>
+                <SegmentedDateFilter
+                    dateFrom={dateFrom}
+                    dateTo={dateTo}
+                    onChange={(from, to) => {
+                        setDateFrom(from);
+                        setDateTo(to);
+                    }}
+                />
             </FilterBar>
 
             {/* Table */}
-            <DataTable
-                columns={columns}
-                data={filtered}
-                keyExtractor={(row) => row.id}
-                onRowClick={(row) => setDetailPurchase(row)}
-                emptyMessage="No hay compras registradas"
-            />
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <DataTable
+                    columns={columns}
+                    data={paged}
+                    keyExtractor={(row) => row.id}
+                    onRowClick={(row) => setDetailPurchase(row)}
+                    emptyMessage="No hay compras registradas"
+                />
+                <Pagination
+                    page={page}
+                    pageSize={pageSize}
+                    total={filtered.length}
+                    onPageChange={setPage}
+                    onPageSizeChange={setPageSize}
+                />
+            </div>
 
             {/* Detail Modal */}
             <Modal

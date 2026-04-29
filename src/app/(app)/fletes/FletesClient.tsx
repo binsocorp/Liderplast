@@ -11,6 +11,7 @@ import { Modal } from '@/components/ui/Modal';
 import { FormField, FormGrid } from '@/components/ui/FormSection';
 import { Input, Textarea, Select } from '@/components/ui/FormInputs';
 import { createTrip, updateTrip, deleteTrip } from './actions';
+import { Pagination } from '@/components/ui/Pagination';
 import { assignOrderToTrip, removeOrderFromTrip, updateTripStatus } from './[id]/actions';
 import type { Trip, Driver, Vehicle, Province, TripOrder } from '@/lib/types/database';
 
@@ -49,6 +50,8 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [orderSearch, setOrderSearch] = useState('');
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(20);
 
     const selectedVehicle = useMemo(() => vehicles.find(v => v.id === vehicleId), [vehicleId, vehicles]);
 
@@ -87,6 +90,10 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
     const selectedOrders = useMemo(() => {
         return availableOrders.filter(o => selectedOrderIds.includes(o.id));
     }, [availableOrders, selectedOrderIds]);
+
+    const paged = useMemo(() =>
+        trips.slice((page - 1) * pageSize, page * pageSize),
+    [trips, page, pageSize]);
 
     // Auto-calculate budgeted cost
     const totalBudgetedCost = useMemo(() => {
@@ -369,12 +376,21 @@ export function FletesClient({ trips, tripOrders, drivers, vehicles, provinces, 
                 </div>
             </div>
 
-            <DataTable
-                columns={columns}
-                data={trips}
-                keyExtractor={(row) => row.id}
-                emptyMessage="No hay fletes registrados para este periodo"
-            />
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <DataTable
+                    columns={columns}
+                    data={paged}
+                    keyExtractor={(row) => row.id}
+                    emptyMessage="No hay fletes registrados para este periodo"
+                />
+                <Pagination
+                    page={page}
+                    pageSize={pageSize}
+                    total={trips.length}
+                    onPageChange={setPage}
+                    onPageSizeChange={setPageSize}
+                />
+            </div>
 
             <Modal
                 open={showModal}

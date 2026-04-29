@@ -4,7 +4,7 @@ import { ExpensesClient } from './ExpensesClient';
 export default async function ExpensesPage({
     searchParams
 }: {
-    searchParams: { new?: string }
+    searchParams: { new?: string; open?: string }
 }) {
     const supabase = await createClient();
 
@@ -34,6 +34,7 @@ export default async function ExpensesPage({
             paymentMethods={paymentMethods || []}
             vendors={vendors || []}
             autoOpen={searchParams.new === '1'}
+            openId={searchParams.open}
         />
     );
 }

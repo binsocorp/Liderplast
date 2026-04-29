@@ -41,9 +41,10 @@ interface MasterCrudProps {
     data: Record<string, unknown>[];
     backHref?: string;
     autoOpen?: boolean;
+    embedded?: boolean;
 }
 
-export function MasterCrud({ title, entityTable, columns, fields, data, backHref = '/master', autoOpen }: MasterCrudProps) {
+export function MasterCrud({ title, entityTable, columns, fields, data, backHref = '/master', autoOpen, embedded }: MasterCrudProps) {
     const router = useRouter();
     const [showModal, setShowModal] = useState(!!autoOpen);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -171,14 +172,24 @@ export function MasterCrud({ title, entityTable, columns, fields, data, backHref
 
     return (
         <>
-            <PageHeader
-                title={title}
-                backHref={backHref}
-                subtitle={`${data.length} registro${data.length !== 1 ? 's' : ''}`}
-                actions={
-                    <Button onClick={openCreate} icon={<Plus className="w-4 h-4" />}>Nuevo</Button>
-                }
-            />
+            {embedded ? (
+                <div className="flex items-center justify-between mb-3">
+                    <div>
+                        <h3 className="text-base font-bold text-gray-900">{title}</h3>
+                        <p className="text-xs text-gray-400">{data.length} registro{data.length !== 1 ? 's' : ''}</p>
+                    </div>
+                    <Button size="sm" onClick={openCreate} icon={<Plus className="w-4 h-4" />}>Nuevo</Button>
+                </div>
+            ) : (
+                <PageHeader
+                    title={title}
+                    backHref={backHref}
+                    subtitle={`${data.length} registro${data.length !== 1 ? 's' : ''}`}
+                    actions={
+                        <Button onClick={openCreate} icon={<Plus className="w-4 h-4" />}>Nuevo</Button>
+                    }
+                />
+            )}
 
             {error && (
                 <div className="mb-4 p-3 bg-danger-50 border border-danger-500/20 rounded-lg text-danger-700 text-sm">

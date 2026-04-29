@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { DataTable, Column } from '@/components/ui/DataTable';
 import { FilterBar, SelectFilter } from '@/components/ui/FilterBar';
+import { SegmentedDateFilter } from '@/components/ui/SegmentedDateFilter';
+import { Pagination } from '@/components/ui/Pagination';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { FormSection, FormField, FormGrid } from '@/components/ui/FormSection';
@@ -55,6 +57,8 @@ export function MovimientosClient({ movements, items }: Props) {
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(20);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
 
@@ -67,7 +71,7 @@ export function MovimientosClient({ movements, items }: Props) {
     });
 
     // Filter
-    const filtered = movements.filter((mov) => {
+    const filtered = useMemo(() => movements.filter((mov) => {
         if (typeFilter && mov.type !== typeFilter) return false;
         if (dateFrom) {
             const movDate = new Date(mov.created_at).toISOString().split('T')[0];
@@ -83,7 +87,13 @@ export function MovimientosClient({ movements, items }: Props) {
             return itemName.includes(q) || mov.description?.toLowerCase().includes(q) || mov.reference?.toLowerCase().includes(q);
         }
         return true;
-    });
+    }), [movements, search, typeFilter, dateFrom, dateTo]);
+
+    useEffect(() => { setPage(1); }, [filtered]);
+
+    const paged = useMemo(() =>
+        filtered.slice((page - 1) * pageSize, page * pageSize),
+        [filtered, page, pageSize]);
 
     function openNew() {
         setForm({ item_id: '', type: 'ENTRADA', quantity: 0, description: '', reference: '' });
@@ -202,34 +212,32 @@ export function MovimientosClient({ movements, items }: Props) {
                     options={TYPE_OPTIONS}
                     allLabel="Todos los tipos"
                 />
-                <div className="flex items-center gap-2">
-                    <Input
-                        type="date"
-                        value={dateFrom}
-                        onChange={(e) => setDateFrom(e.target.value)}
-                        uiSize="sm"
-                        className="w-auto"
-                        placeholder="Desde"
-                    />
-                    <span className="text-gray-400 text-sm">—</span>
-                    <Input
-                        type="date"
-                        value={dateTo}
-                        onChange={(e) => setDateTo(e.target.value)}
-                        uiSize="sm"
-                        className="w-auto"
-                        placeholder="Hasta"
-                    />
-                </div>
+                <SegmentedDateFilter
+                    dateFrom={dateFrom}
+                    dateTo={dateTo}
+                    onChange={(from, to) => {
+                        setDateFrom(from);
+                        setDateTo(to);
+                    }}
+                />
             </FilterBar>
 
             {/* Table */}
-            <DataTable
-                columns={columns}
-                data={filtered}
-                keyExtractor={(row) => row.id}
-                emptyMessage="No hay movimientos registrados"
-            />
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <DataTable
+                    columns={columns}
+                    data={paged}
+                    keyExtractor={(row) => row.id}
+                    emptyMessage="No hay movimientos registrados"
+                />
+                <Pagination
+                    page={page}
+                    pageSize={pageSize}
+                    total={filtered.length}
+                    onPageChange={setPage}
+                    onPageSizeChange={setPageSize}
+                />
+            </div>
 
             {/* New Movement Modal */}
             <Modal

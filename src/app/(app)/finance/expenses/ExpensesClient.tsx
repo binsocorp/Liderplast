@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Pencil, Trash2, DollarSign, FileText, TrendingDown, Clock, AlertTriangle } from 'lucide-react';
 import {
@@ -11,7 +11,9 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { KPICard, KPIContainer } from '@/components/dashboard/KPICard';
+import { Pagination } from '@/components/ui/Pagination';
 import { ColumnFilter } from '@/components/ui/ColumnFilter';
+import { SegmentedDateFilter } from '@/components/ui/SegmentedDateFilter';
 import { NewExpenseModal } from './NewExpenseModal';
 import { toggleExpenseStatus, deleteExpense } from './actions';
 import { parseLocalDate, formatLocalDate, todayLocalString, startOfMonthLocalString } from '@/lib/utils/dates';
@@ -33,13 +35,25 @@ export function ExpensesClient({
     subcategories,
     paymentMethods,
     vendors,
-    autoOpen
+    autoOpen,
+    openId
 }: any) {
     const router = useRouter();
 
     // Modal
     const [showModal, setShowModal] = useState(!!autoOpen);
     const [editingExpense, setEditingExpense] = useState<any>(null);
+
+    useEffect(() => {
+        if (openId) {
+            const expense = expenses.find((e: any) => e.id === openId);
+            if (expense) {
+                setEditingExpense(expense);
+                setShowModal(true);
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [openId]);
 
     // ── Date slicer ──
     const [dateFrom, setDateFrom] = useState(startOfMonthLocalString());
@@ -52,6 +66,8 @@ export function ExpensesClient({
     const [subcategoryFilter, setSubcategoryFilter] = useState('');
     const [paymentMethodFilter, setPaymentMethodFilter] = useState('');
     const [onlyPending, setOnlyPending] = useState(false);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(20);
 
     // ── Filtered Data ──
     const filtered = useMemo(() => {
@@ -81,6 +97,12 @@ export function ExpensesClient({
         }
         return result;
     }, [expenses, dateFrom, dateTo, search, statusFilter, categoryFilter, subcategoryFilter, paymentMethodFilter, onlyPending]);
+
+    useEffect(() => { setPage(1); }, [filtered]);
+
+    const paged = useMemo(() =>
+        filtered.slice((page - 1) * pageSize, page * pageSize),
+        [filtered, page, pageSize]);
 
     // ── KPIs ──
     const stats = useMemo(() => {
@@ -157,33 +179,22 @@ export function ExpensesClient({
 
             {/* ─── DATE SLICER ─── */}
             <div className="bg-white/70 backdrop-blur-sm border border-gray-200/60 rounded-2xl p-4 mb-6 flex flex-wrap items-center gap-4 shadow-sm">
-                <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Período</span>
-                    <div className="flex items-center bg-gray-100 rounded-xl p-1">
-                        <input
-                            type="date"
-                            value={dateFrom}
-                            onChange={(e) => setDateFrom(e.target.value)}
-                            className="bg-transparent border-none text-xs font-bold text-gray-700 focus:ring-0 px-2 py-1"
-                        />
-                        <span className="text-gray-400 text-[10px] font-black mx-1">—</span>
-                        <input
-                            type="date"
-                            value={dateTo}
-                            onChange={(e) => setDateTo(e.target.value)}
-                            className="bg-transparent border-none text-xs font-bold text-gray-700 focus:ring-0 px-2 py-1"
-                        />
-                    </div>
-                </div>
+                <SegmentedDateFilter
+                    dateFrom={dateFrom}
+                    dateTo={dateTo}
+                    onChange={(from, to) => {
+                        setDateFrom(from);
+                        setDateTo(to);
+                    }}
+                />
 
                 {/* Solo pendientes toggle */}
                 <button
                     onClick={() => setOnlyPending(p => !p)}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                        onlyPending
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${onlyPending
                             ? 'bg-warning-500 text-white shadow-sm'
                             : 'bg-gray-100 text-gray-600 hover:bg-warning-50 hover:text-warning-700'
-                    }`}
+                        }`}
                 >
                     <AlertTriangle className="w-3.5 h-3.5" />
                     Solo pendientes
@@ -297,69 +308,69 @@ export function ExpensesClient({
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
-                            {filtered.length === 0 ? (
+                            {paged.length === 0 ? (
                                 <tr>
                                     <td colSpan={8} className="px-4 py-12 text-center text-gray-400 font-medium">
                                         No hay egresos para el período y filtros seleccionados.
                                     </td>
                                 </tr>
                             ) : (
-                                filtered.map((r: any) => {
+                                paged.map((r: any) => {
                                     const daysPending = r.status === 'PENDIENTE'
                                         ? Math.floor((Date.now() - parseLocalDate(r.issue_date).getTime()) / 86400000)
                                         : 0;
                                     const isOverdue = daysPending > 30;
                                     return (
-                                    <tr
-                                        key={r.id}
-                                        className={`transition-colors cursor-pointer ${isOverdue ? 'bg-danger-50/40 hover:bg-danger-50/60' : 'hover:bg-gray-50/50'}`}
-                                        onClick={() => { setEditingExpense(r); setShowModal(true); }}
-                                    >
-                                        <td className="px-4 py-3">
-                                            <div
-                                                onClick={(e) => { e.stopPropagation(); handleToggleStatus(r.id, r.status); }}
-                                                className="cursor-pointer"
-                                            >
-                                                <Badge status={r.status} />
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-gray-600 font-medium tabular-nums">
-                                            {formatDate(r.issue_date)}
-                                        </td>
-                                        <td className="px-4 py-3 font-semibold text-gray-800">
-                                            {r.category?.name || '-'}
-                                        </td>
-                                        <td className="px-4 py-3 text-gray-500 text-xs font-medium">
-                                            {r.subcategory?.name || '-'}
-                                        </td>
-                                        <td className="px-4 py-3 text-gray-700 max-w-[250px] truncate">
-                                            {r.description}
-                                        </td>
-                                        <td className="px-4 py-3 text-gray-500 font-medium">
-                                            {r.payment_method?.name || '-'}
-                                        </td>
-                                        <td className="px-4 py-3 text-right font-bold text-gray-900 tabular-nums">
-                                            {formatCurrency(Number(r.amount))}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex justify-end gap-1">
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); setEditingExpense(r); setShowModal(true); }}
-                                                    className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                                                    title="Editar"
+                                        <tr
+                                            key={r.id}
+                                            className={`transition-colors cursor-pointer ${isOverdue ? 'bg-danger-50/40 hover:bg-danger-50/60' : 'hover:bg-gray-50/50'}`}
+                                            onClick={() => { setEditingExpense(r); setShowModal(true); }}
+                                        >
+                                            <td className="px-4 py-3">
+                                                <div
+                                                    onClick={(e) => { e.stopPropagation(); handleToggleStatus(r.id, r.status); }}
+                                                    className="cursor-pointer"
                                                 >
-                                                    <Pencil className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handleDelete(r.id); }}
-                                                    className="p-1.5 text-gray-400 hover:text-danger-600 hover:bg-danger-50 rounded-lg transition-colors"
-                                                    title="Eliminar"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                                    <Badge status={r.status} />
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 text-gray-600 font-medium tabular-nums">
+                                                {formatDate(r.issue_date)}
+                                            </td>
+                                            <td className="px-4 py-3 font-semibold text-gray-800">
+                                                {r.category?.name || '-'}
+                                            </td>
+                                            <td className="px-4 py-3 text-gray-500 text-xs font-medium">
+                                                {r.subcategory?.name || '-'}
+                                            </td>
+                                            <td className="px-4 py-3 text-gray-700 max-w-[250px] truncate">
+                                                {r.description}
+                                            </td>
+                                            <td className="px-4 py-3 text-gray-500 font-medium">
+                                                {r.payment_method?.name || '-'}
+                                            </td>
+                                            <td className="px-4 py-3 text-right font-bold text-gray-900 tabular-nums">
+                                                {formatCurrency(Number(r.amount))}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex justify-end gap-1">
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setEditingExpense(r); setShowModal(true); }}
+                                                        className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                                                        title="Editar"
+                                                    >
+                                                        <Pencil className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleDelete(r.id); }}
+                                                        className="p-1.5 text-gray-400 hover:text-danger-600 hover:bg-danger-50 rounded-lg transition-colors"
+                                                        title="Eliminar"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
                                     );
                                 })
                             )}
@@ -367,17 +378,15 @@ export function ExpensesClient({
                     </table>
                 </div>
 
-                {/* Table footer with totals */}
-                {filtered.length > 0 && (
-                    <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center">
-                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                            Mostrando {filtered.length} de {expenses.length} registros
-                        </span>
-                        <span className="text-sm font-black text-gray-900 tracking-tight">
-                            Total: {formatCurrency(stats.total)}
-                        </span>
-                    </div>
-                )}
+                <div className="border-t border-gray-100">
+                    <Pagination
+                        page={page}
+                        pageSize={pageSize}
+                        total={filtered.length}
+                        onPageChange={setPage}
+                        onPageSizeChange={setPageSize}
+                    />
+                </div>
             </div>
 
             {/* ─── MODAL ─── */}

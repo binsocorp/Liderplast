@@ -43,6 +43,7 @@ export function NewIncomeModal({ open, onClose, orders, paymentMethods, editingI
     const [amount, setAmount] = useState('');
     const [paymentMethodId, setPaymentMethodId] = useState('');
     const [invoiceType, setInvoiceType] = useState('');
+    const [referenceNumber, setReferenceNumber] = useState('');
     const [description, setDescription] = useState('');
     const [notes, setNotes] = useState('');
 
@@ -57,6 +58,7 @@ export function NewIncomeModal({ open, onClose, orders, paymentMethods, editingI
             setAmount(String(editingIncome.amount || ''));
             setPaymentMethodId(editingIncome.payment_method_id || '');
             setInvoiceType(editingIncome.invoice_type || '');
+            setReferenceNumber(editingIncome.reference_number || '');
             setDescription(editingIncome.description || '');
             setNotes(editingIncome.notes || '');
         } else {
@@ -66,12 +68,16 @@ export function NewIncomeModal({ open, onClose, orders, paymentMethods, editingI
             setAmount('');
             setPaymentMethodId('');
             setInvoiceType('');
+            setReferenceNumber('');
             setDescription('');
             setNotes('');
         }
         setError('');
         setOrderSearch('');
     }, [editingIncome, open, preloadedOrderId]);
+
+    const selectedPaymentMethod = paymentMethods.find((p: any) => p.id === paymentMethodId);
+    const needsReference = /transferencia|tarjeta/i.test(selectedPaymentMethod?.name || '');
 
     const selectedOrder = orders.find(o => o.id === orderId);
     const pendingAmount = selectedOrder
@@ -113,6 +119,11 @@ export function NewIncomeModal({ open, onClose, orders, paymentMethods, editingI
             return;
         }
 
+        if (needsReference && !referenceNumber.trim()) {
+            setError('El número de comprobante es obligatorio para transferencias y tarjetas');
+            return;
+        }
+
         const formData = {
             issue_date: issueDate,
             income_type: incomeType,
@@ -120,6 +131,7 @@ export function NewIncomeModal({ open, onClose, orders, paymentMethods, editingI
             amount,
             payment_method_id: paymentMethodId,
             invoice_type: invoiceType,
+            reference_number: referenceNumber.trim() || null,
             description,
             notes
         };
@@ -292,6 +304,21 @@ export function NewIncomeModal({ open, onClose, orders, paymentMethods, editingI
                                 </select>
                             </div>
                         </div>
+
+                        {needsReference && (
+                            <div className="space-y-1.5">
+                                <label className="text-sm font-semibold text-gray-700">
+                                    Número de Comprobante <span className="text-danger-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={referenceNumber}
+                                    onChange={e => setReferenceNumber(e.target.value)}
+                                    placeholder="Ej: 0001234567, últimos 4 dígitos tarjeta..."
+                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-sm font-medium"
+                                />
+                            </div>
+                        )}
 
                         <div className="space-y-1.5">
                             <label className="text-sm font-semibold text-gray-700">Tipo de Comprobante</label>

@@ -26,8 +26,8 @@ export async function assignOrderToTrip(orderId: string, tripId: string) {
 
     if (assignError) return { error: assignError.message };
 
-    // 3. Sync: Update orders table trip_id column
-    await (supabase.from('orders') as any).update({ trip_id: tripId }).eq('id', orderId);
+    // 3. Sync: Update orders table trip_id and status
+    await (supabase.from('orders') as any).update({ trip_id: tripId, status: 'POR_DESPACHAR' }).eq('id', orderId);
 
     revalidatePath(`/fletes/${tripId}`);
     revalidatePath(`/fletes`);
@@ -46,8 +46,8 @@ export async function removeOrderFromTrip(orderId: string, tripId: string) {
 
     if (deleteError) return { error: deleteError.message };
 
-    // 2. Sync: Remove trip_id from orders table
-    await (supabase.from('orders') as any).update({ trip_id: null }).eq('id', orderId);
+    // 2. Sync: Remove trip_id and reset status
+    await (supabase.from('orders') as any).update({ trip_id: null, status: 'CONFIRMADO' }).eq('id', orderId);
 
     revalidatePath(`/fletes/${tripId}`);
     revalidatePath(`/fletes`);

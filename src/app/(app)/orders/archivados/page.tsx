@@ -11,7 +11,7 @@ export default async function ArchivedOrdersPage() {
         .order('updated_at', { ascending: false });
 
     if (error || !ordersData) {
-        return <div className="p-4">Error cargando pedidos archivados</div>;
+        return <div className="p-4">Error cargando pedidos finalizados</div>;
     }
 
     const sellerIds = [...new Set(ordersData.map((o: any) => o.seller_id).filter(Boolean))];

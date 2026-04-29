@@ -6,23 +6,19 @@ export const dynamic = 'force-dynamic';
 export default async function CajaPage() {
     const supabase = await createClient();
 
-    // Fetch payment methods (accounts)
     const { data: paymentMethods } = await supabase
         .from('finance_payment_methods')
-        .select('*')
+        .select('id, name')
         .eq('is_active', true)
         .order('name');
 
-    // Fetch all account movements (ordered newest first)
     const { data: movements, error } = await (supabase
         .from('account_movements') as any)
-        .select('*, payment_method:finance_payment_methods!payment_method_id(id, name), transfer_to:finance_payment_methods!transfer_to_method_id(id, name)')
+        .select('id, payment_method_id, movement_type, amount, description, movement_date, created_at, source_type, transfer_id, transfer_to_method_id')
         .order('movement_date', { ascending: false })
         .order('created_at', { ascending: false });
 
-    if (error) {
-        console.error('Error fetching movements:', error);
-    }
+    if (error) console.error('Error fetching movements:', error);
 
     return (
         <div className="p-1">

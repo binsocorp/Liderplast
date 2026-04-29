@@ -100,6 +100,16 @@ export async function updateOrder(id: string, formData: Partial<OrderFormData> &
     return { success: true };
 }
 
+export async function completeInstallation(id: string) {
+    const supabase = await createClient();
+    const { error } = await (supabase.from('orders') as any)
+        .update({ status: 'COMPLETADO', updated_at: new Date().toISOString() })
+        .eq('id', id);
+    if (error) return { error: error.message };
+    revalidatePath('/orders');
+    return { success: true };
+}
+
 export async function archiveOrder(id: string) {
     const supabase = await createClient();
     const { error } = await (supabase.from('orders') as any)
@@ -113,9 +123,34 @@ export async function archiveOrder(id: string) {
     return { success: true };
 }
 
+export async function unarchiveOrder(id: string) {
+    const supabase = await createClient();
+    const { error } = await (supabase.from('orders') as any)
+        .update({ status: 'COMPLETADO', updated_at: new Date().toISOString() })
+        .eq('id', id);
+
+    if (error) return { error: error.message };
+
+    revalidatePath('/orders');
+    revalidatePath('/orders/archivados');
+    return { success: true };
+}
+
 export async function deleteOrder(id: string) {
     const supabase = await createClient();
-    const { error } = await supabase.from('orders').delete().eq('id', id);
+
+    // Eliminar cotización vinculada en caso de existir
+    const { data: quotation } = await (supabase.from('quotations') as any)
+        .select('id')
+        .eq('converted_order_id', id)
+        .single();
+
+    if (quotation) {
+        await (supabase.from('quotation_items') as any).delete().eq('quotation_id', quotation.id);
+        await (supabase.from('quotations') as any).delete().eq('id', quotation.id);
+    }
+
+    const { error } = await (supabase.from('orders') as any).delete().eq('id', id);
 
     if (error) return { error: error.message };
 

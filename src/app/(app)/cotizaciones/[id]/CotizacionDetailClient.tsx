@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { FileText, ExternalLink, CheckCircle, XCircle, ArrowLeft, MessageCircle, Trash2 } from 'lucide-react';
+import { FileText, ExternalLink, CheckCircle, XCircle, ArrowLeft, Trash2 } from 'lucide-react';
 import { acceptQuotation, cancelQuotation, deleteQuotation } from '../actions';
 import type { QuotationWithRelations } from '@/lib/types/database';
 import { isQuotationExpired } from '@/lib/types/database';
@@ -126,19 +126,6 @@ export function CotizacionDetailClient({ quotation, convertedOrderNumber }: Prop
                 </div>
 
                 <div className="flex items-center gap-2">
-                    {quotation.client_phone && (
-                        <a
-                            href={`https://wa.me/${quotation.client_phone.replace(/\D/g, '')}?text=${encodeURIComponent(
-                                `Hola ${quotation.client_name}, te enviamos la cotización *${quotation.quotation_number}* de Liderplast.\n\nTotal: *${new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(Number(quotation.total_net))}*\n\nPodés verla completa en PDF o contactarnos ante cualquier consulta.`
-                            )}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 h-9 px-3 bg-green-50 hover:bg-green-100 text-green-700 text-xs font-bold rounded-lg transition-colors border border-green-200"
-                        >
-                            <MessageCircle className="w-4 h-4" />
-                            Enviar por WhatsApp
-                        </a>
-                    )}
                     <a
                         href={`/api/cotizaciones/${quotation.id}/pdf`}
                         download={`COT-${quotation.quotation_number}.pdf`}

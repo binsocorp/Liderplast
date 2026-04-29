@@ -52,9 +52,9 @@ export async function createTrip(formData: any) {
             return { error: 'Error vinculando pedidos: ' + assignError.message };
         }
 
-        // 4. Sync: Update orders table trip_id column
+        // 4. Sync: Update orders table trip_id and status
         const { error: syncError } = await (supabase.from('orders') as any)
-            .update({ trip_id: trip.id })
+            .update({ trip_id: trip.id, status: 'POR_DESPACHAR' })
             .in('id', order_ids);
 
         if (syncError) {

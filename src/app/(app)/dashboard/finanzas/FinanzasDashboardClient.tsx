@@ -16,7 +16,6 @@ const formatCurrency = (val: number) =>
 const MOVEMENT_SIGN: Record<string, number> = {
     INGRESO: +1, EGRESO: -1,
     TRANSFERENCIA_IN: +1, TRANSFERENCIA_OUT: -1,
-    SALDO_INICIAL: +1, AJUSTE: +1,
 };
 
 const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];

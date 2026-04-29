@@ -42,7 +42,7 @@ export function OrderDetailClient({
     const [channel, setChannel] = useState<SalesChannel>(order.channel || 'INTERNO');
     const [sellerId, setSellerId] = useState(order.seller_id || '');
     const [resellerId, setResellerId] = useState(order.reseller_id || '');
-    const [priceListId, setPriceListId] = useState('');
+    const [priceListId, setPriceListId] = useState(order.price_list_id || '');
     const [provinceId, setProvinceId] = useState(order.province_id || '');
     const [clientId, setClientId] = useState(order.client_id || '');
     const [clientName, setClientName] = useState(order.client_name || '');
@@ -55,17 +55,6 @@ export function OrderDetailClient({
     const [tripId, setTripId] = useState(order.trip_id || '');
     const [paidAmount, setPaidAmount] = useState(String(order.paid_amount || 0));
 
-    // Auto-fill Default Price List when Channel is REVENDEDOR
-    useEffect(() => {
-        if (channel === 'REVENDEDOR' && !priceListId) {
-            const reseller = resellers?.find((r: any) => r.id === resellerId);
-            if (reseller?.default_price_list_id) {
-                setPriceListId(reseller.default_price_list_id);
-            } else if (resellerLists?.length > 0) {
-                setPriceListId(resellerLists[0].id);
-            }
-        }
-    }, [channel, resellerId, resellerLists, priceListId]);
 
     // Products State
     const cascoObj = findCasco();
@@ -182,6 +171,7 @@ export function OrderDetailClient({
             channel: channel,
             seller_id: channel === 'INTERNO' ? (sellerId || null) : null,
             reseller_id: channel === 'REVENDEDOR' ? (resellerId || null) : null,
+            price_list_id: channel === 'REVENDEDOR' ? (priceListId || null) : null,
             // status removed
             trip_id: tripId || null,
             discount_amount: Number(descuento) || 0,
@@ -555,7 +545,7 @@ export function OrderDetailClient({
                             <Button
                                 type="button"
                                 onClick={async () => {
-                                    if (!confirm('¿Archivar este pedido? Lo podrás ver en la sección de Archivados.')) return;
+                                    if (!confirm('¿Finalizar este pedido? Lo podrás ver en la sección de Finalizados.')) return;
                                     setSaving(true);
                                     const result = await archiveOrder(order.id);
                                     setSaving(false);
@@ -565,7 +555,7 @@ export function OrderDetailClient({
                                 disabled={saving}
                                 className="h-14 px-10 rounded-2xl bg-gray-600 hover:bg-gray-500 text-white font-black uppercase text-xs tracking-widest transition-all shadow-xl active:scale-95"
                             >
-                                Archivar
+                                Finalizar
                             </Button>
                         )}
                     </div>

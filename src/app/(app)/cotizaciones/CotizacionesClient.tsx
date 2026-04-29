@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useTransition } from 'react';
+import { useState, useMemo, useTransition, useEffect } from 'react';
 import Link from 'next/link';
 import { FileText, Plus, Search, ExternalLink, CheckCircle2, Wallet, DollarSign, Check, Trash2 } from 'lucide-react';
 import type { QuotationWithRelations } from '@/lib/types/database';
@@ -10,6 +10,7 @@ import { KPICard, KPIContainer } from '@/components/dashboard/KPICard';
 import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
 import { acceptQuotation, deleteQuotation } from './actions';
 import { useToast } from '@/components/ui/Toast';
+import { Pagination } from '@/components/ui/Pagination';
 
 type StatusFilter = 'TODAS' | 'ACTIVAS' | 'ACEPTADAS' | 'RECHAZADAS' | 'VENCIDAS';
 
@@ -65,6 +66,8 @@ export function CotizacionesClient({
     const [sellerId, setSellerId] = useState('');
     const [provinceId, setProvinceId] = useState('');
     const [emisorId, setEmisorId] = useState('');
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(20);
 
     const handleAccept = (id: string) => {
         setProcessingId(id);
@@ -133,6 +136,12 @@ export function CotizacionesClient({
             return true;
         });
     }, [baseFiltered, search, statusFilter]);
+
+    useEffect(() => { setPage(1); }, [filtered]);
+
+    const paged = useMemo(() =>
+        filtered.slice((page - 1) * pageSize, page * pageSize),
+    [filtered, page, pageSize]);
 
     // Contadores por estado y KPIs
     const counts = useMemo(() => {
@@ -295,7 +304,7 @@ export function CotizacionesClient({
                                 </td>
                             </tr>
                         ) : (
-                            filtered.map(q => {
+                            paged.map(q => {
                                 const subtotalServicios = q.freight_amount + q.installation_amount + q.travel_amount + q.other_amount + q.subtotal_services;
                                 return (
                                     <tr key={q.id} className="hover:bg-gray-50/50 transition-colors">
@@ -435,6 +444,13 @@ export function CotizacionesClient({
                         )}
                     </tbody>
                 </table>
+                <Pagination
+                    page={page}
+                    pageSize={pageSize}
+                    total={filtered.length}
+                    onPageChange={setPage}
+                    onPageSizeChange={setPageSize}
+                />
             </div>
         </div>
     );

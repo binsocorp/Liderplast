@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Archive, ExternalLink } from 'lucide-react';
+import { Search, Archive, ExternalLink, ArchiveRestore } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
+import { Pagination } from '@/components/ui/Pagination';
 import Link from 'next/link';
+import { unarchiveOrder } from '../actions';
 
 interface ArchivedOrder {
     id: string;
@@ -25,7 +27,10 @@ interface ArchivedOrdersClientProps {
 }
 
 export function ArchivedOrdersClient({ orders }: ArchivedOrdersClientProps) {
+    const router = useRouter();
     const [searchQuery, setSearchQuery] = useState('');
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(20);
 
     const filtered = useMemo(() => {
         if (!searchQuery) return orders;
@@ -35,6 +40,12 @@ export function ArchivedOrdersClient({ orders }: ArchivedOrdersClientProps) {
         );
     }, [orders, searchQuery]);
 
+    useEffect(() => { setPage(1); }, [filtered]);
+
+    const paged = useMemo(() =>
+        filtered.slice((page - 1) * pageSize, page * pageSize),
+    [filtered, page, pageSize]);
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -43,8 +54,8 @@ export function ArchivedOrdersClient({ orders }: ArchivedOrdersClientProps) {
                         <Archive className="w-5 h-5 text-gray-500" />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-black text-indigo-950 tracking-tight">Pedidos Archivados</h1>
-                        <p className="text-sm text-gray-400 font-medium">{orders.length} pedidos archivados</p>
+                        <h1 className="text-2xl font-black text-indigo-950 tracking-tight">Pedidos Finalizados</h1>
+                        <p className="text-sm text-gray-400 font-medium">{orders.length} pedidos finalizados</p>
                     </div>
                 </div>
             </div>
@@ -71,7 +82,7 @@ export function ArchivedOrdersClient({ orders }: ArchivedOrdersClientProps) {
                             <tr className="bg-gray-50/50 border-b border-gray-100">
                                 <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider"># Orden</th>
                                 <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Fecha</th>
-                                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Archivado</th>
+                                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Finalizado</th>
                                 <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Cliente</th>
                                 <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Vendedor</th>
                                 <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Provincia</th>
@@ -81,8 +92,8 @@ export function ArchivedOrdersClient({ orders }: ArchivedOrdersClientProps) {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
-                            {filtered.length > 0 ? (
-                                filtered.map((order) => (
+                            {paged.length > 0 ? (
+                                paged.map((order) => (
                                     <tr key={order.id} className="bg-gray-50/30 hover:bg-gray-50/60 transition-colors">
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className="text-sm font-bold text-gray-500">
@@ -123,13 +134,28 @@ export function ArchivedOrdersClient({ orders }: ArchivedOrdersClientProps) {
                                             <Badge status="ARCHIVADO" />
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right">
-                                            <Link
-                                                href={`/orders/${order.id}`}
-                                                className="inline-flex items-center gap-1 text-xs font-bold text-gray-400 hover:text-primary-600 transition-colors"
-                                            >
-                                                <ExternalLink className="w-3.5 h-3.5" />
-                                                Ver
-                                            </Link>
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    onClick={async () => {
+                                                        if (!confirm('¿Restaurar este pedido? Volverá al estado Completado.')) return;
+                                                        const res = await unarchiveOrder(order.id);
+                                                        if (res.error) alert('Error: ' + res.error);
+                                                        else router.refresh();
+                                                    }}
+                                                    className="inline-flex items-center gap-1 text-xs font-bold text-amber-500 hover:text-amber-700 hover:bg-amber-50 px-2 py-1 rounded-lg transition-colors"
+                                                    title="Restaurar pedido"
+                                                >
+                                                    <ArchiveRestore className="w-3.5 h-3.5" />
+                                                    Restaurar
+                                                </button>
+                                                <Link
+                                                    href={`/orders/${order.id}`}
+                                                    className="inline-flex items-center gap-1 text-xs font-bold text-gray-400 hover:text-primary-600 transition-colors"
+                                                >
+                                                    <ExternalLink className="w-3.5 h-3.5" />
+                                                    Ver
+                                                </Link>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -137,13 +163,20 @@ export function ArchivedOrdersClient({ orders }: ArchivedOrdersClientProps) {
                                 <tr>
                                     <td colSpan={9} className="px-6 py-16 text-center">
                                         <Archive className="w-8 h-8 text-gray-200 mx-auto mb-2" />
-                                        <p className="text-gray-400 italic text-sm">No hay pedidos archivados</p>
+                                        <p className="text-gray-400 italic text-sm">No hay pedidos finalizados</p>
                                     </td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
                 </div>
+                <Pagination
+                    page={page}
+                    pageSize={pageSize}
+                    total={filtered.length}
+                    onPageChange={setPage}
+                    onPageSizeChange={setPageSize}
+                />
             </div>
         </div>
     );

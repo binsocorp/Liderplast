@@ -144,7 +144,7 @@ const MANUAL_ITEMS: AccordionItem[] = [
                     <ul className="space-y-1">
                         <li><strong>Kanban</strong> — vista por columnas de estado, ideal para seguimiento visual del flujo.</li>
                         <li><strong>Lista</strong> — vista tabular, útil para buscar, filtrar y exportar.</li>
-                        <li><strong>Archivados</strong> — pedidos completados o cancelados que ya no están en el flujo activo.</li>
+                        <li><strong>Finalizados</strong> — pedidos completados o cancelados que ya no están en el flujo activo.</li>
                     </ul>
                 )
             },
@@ -156,7 +156,7 @@ const MANUAL_ITEMS: AccordionItem[] = [
                     { label: 'Listo', color: 'bg-blue-100 text-blue-700', desc: 'Producción terminada, esperando ser despachado.' },
                     { label: 'En ruta', color: 'bg-purple-100 text-purple-700', desc: 'Asignado a un flete, en camino al cliente.' },
                     { label: 'Entregado', color: 'bg-green-100 text-green-700', desc: 'Confirmado como entregado.' },
-                    { label: 'Archivado', color: 'bg-gray-100 text-gray-500', desc: 'Cerrado y fuera del flujo activo.' },
+                    { label: 'Finalizado', color: 'bg-gray-100 text-gray-500', desc: 'Cerrado y fuera del flujo activo.' },
                 ]} />
             },
             {
@@ -164,8 +164,8 @@ const MANUAL_ITEMS: AccordionItem[] = [
                 content: 'Desde el detalle de un pedido entregado o en ruta podés generar el remito en PDF para la entrega física al cliente.'
             },
             {
-                heading: 'Archivados',
-                content: 'Los pedidos archivados se encuentran en Pedidos → Archivados. No se pueden modificar, solo consultar. Archivá un pedido cuando ya fue completamente cerrado y no necesita seguimiento.'
+                heading: 'Finalizados',
+                content: 'Los pedidos finalizados se encuentran en Pedidos → Finalizados. No se pueden modificar, solo consultar. Finalizá un pedido cuando ya fue completamente cerrado y no necesita seguimiento.'
             },
         ]
     },
@@ -385,31 +385,6 @@ const MANUAL_ITEMS: AccordionItem[] = [
         ]
     },
     {
-        title: 'Producción — Rendimiento',
-        subtitle: 'Estadísticas históricas de producción',
-        icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-        ),
-        sections: [
-            {
-                heading: '¿Cuándo usarlo?',
-                content: 'Para analizar cuánto se produjo por período, qué productos se fabricaron más y cómo evolucionó la producción en el tiempo. Útil para planificación y revisiones mensuales.'
-            },
-            {
-                heading: '¿Qué muestra?',
-                content: (
-                    <ul className="space-y-1">
-                        <li>Unidades producidas por producto y período.</li>
-                        <li>Comparativa de producción entre meses.</li>
-                        <li>Historial de todos los lotes registrados.</li>
-                    </ul>
-                )
-            },
-        ]
-    },
-    {
         title: 'Finanzas — Ingresos',
         subtitle: 'Registro de entradas de dinero',
         icon: (
@@ -502,7 +477,7 @@ const MANUAL_ITEMS: AccordionItem[] = [
 const MODULE_GROUPS = [
     { label: 'Ventas', keys: ['Cotizaciones', 'Pedidos', 'Fletes'] },
     { label: 'Inventario', keys: ['Inventario — Stock', 'Inventario — Movimientos', 'Inventario — Compras'] },
-    { label: 'Producción', keys: ['Producción', 'Producción — BOM', 'Producción — Costos', 'Producción — Rendimiento'] },
+    { label: 'Producción', keys: ['Producción', 'Producción — BOM', 'Producción — Costos'] },
     { label: 'Finanzas', keys: ['Finanzas — Ingresos', 'Finanzas — Egresos', 'Finanzas — Caja'] },
 ];
 

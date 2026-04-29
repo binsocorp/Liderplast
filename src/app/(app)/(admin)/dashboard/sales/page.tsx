@@ -7,21 +7,21 @@ export default async function SalesDashboardPage() {
     const [
         { data: orders },
         { data: sellers },
-        { data: provinces },
-        { data: catalogItems }
+        { data: resellers },
+        { data: provinces }
     ] = await Promise.all([
-        supabase.from('orders').select('*, seller:sellers(*), province:provinces(*)'),
-        supabase.from('sellers').select('*'),
-        supabase.from('provinces').select('*'),
-        supabase.from('catalog_items').select('*')
+        supabase.from('orders').select('*, items:order_items(*, catalog_item:catalog_items(id, name, sales_category)), reseller:resellers(id, name)'),
+        supabase.from('sellers').select('id, name'),
+        supabase.from('resellers').select('id, name, province_id'),
+        supabase.from('provinces').select('id, name')
     ]);
 
     return (
         <SalesClient
             orders={orders || []}
             sellers={sellers || []}
+            resellers={resellers || []}
             provinces={provinces || []}
-            catalogItems={catalogItems || []}
         />
     );
 }

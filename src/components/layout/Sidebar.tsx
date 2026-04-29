@@ -30,7 +30,7 @@ const NAV_ITEMS = [
         adminOnly: false,
         subItems: [
             { label: 'Todos los pedidos', href: '/orders' },
-            { label: 'Archivados', href: '/orders/archivados' },
+            { label: 'Finalizados', href: '/orders/archivados' },
         ]
     },
     {
@@ -72,7 +72,6 @@ const NAV_ITEMS = [
             { label: 'Producción', href: '/produccion' },
             { label: 'BOM', href: '/produccion/bom' },
             { label: 'Costos', href: '/produccion/costos' },
-            { label: 'Rendimiento', href: '/produccion/rendimiento' },
         ]
     },
     {
@@ -113,7 +112,6 @@ const ADMIN_ITEMS = [
         ),
         subItems: [
             { label: 'Resumen Ejecutivo', href: '/dashboard/executive' },
-            { label: 'Finanzas y Costos', href: '/dashboard/finance' },
             { label: 'Ventas y Clientes', href: '/dashboard/sales' },
             { label: 'Finanzas (Caja)', href: '/dashboard/finanzas' },
         ]

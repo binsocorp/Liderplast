@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { DataTable, Column } from '@/components/ui/DataTable';
 import { FilterBar, SelectFilter } from '@/components/ui/FilterBar';
+import { SegmentedDateFilter } from '@/components/ui/SegmentedDateFilter';
+import { Pagination } from '@/components/ui/Pagination';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { FormSection, FormField, FormGrid } from '@/components/ui/FormSection';
@@ -57,6 +59,8 @@ export function ProduccionClient({ productions, products }: Props) {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [shortages, setShortages] = useState<Shortage[]>([]);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(20);
 
     const [lines, setLines] = useState<ProductionLine[]>([{ product_id: '', quantity: 0 }]);
     const [shared, setShared] = useState({
@@ -64,7 +68,7 @@ export function ProduccionClient({ productions, products }: Props) {
         notes: '',
     });
 
-    const filtered = productions.filter((p) => {
+    const filtered = useMemo(() => productions.filter((p) => {
         if (statusFilter && p.status !== statusFilter) return false;
         if (dateFrom && p.production_date < dateFrom) return false;
         if (dateTo && p.production_date > dateTo) return false;
@@ -77,7 +81,13 @@ export function ProduccionClient({ productions, products }: Props) {
             );
         }
         return true;
-    });
+    }), [productions, search, statusFilter, dateFrom, dateTo]);
+
+    useEffect(() => { setPage(1); }, [filtered]);
+
+    const paged = useMemo(() =>
+        filtered.slice((page - 1) * pageSize, page * pageSize),
+        [filtered, page, pageSize]);
 
     function openNew() {
         setLines([{ product_id: '', quantity: 0 }]);
@@ -216,19 +226,31 @@ export function ProduccionClient({ productions, products }: Props) {
                     ]}
                     allLabel="Todos los estados"
                 />
-                <div className="flex items-center gap-2">
-                    <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} uiSize="sm" className="w-auto" />
-                    <span className="text-gray-400 text-sm">—</span>
-                    <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} uiSize="sm" className="w-auto" />
-                </div>
+                <SegmentedDateFilter
+                    dateFrom={dateFrom}
+                    dateTo={dateTo}
+                    onChange={(from, to) => {
+                        setDateFrom(from);
+                        setDateTo(to);
+                    }}
+                />
             </FilterBar>
 
-            <DataTable
-                columns={columns}
-                data={filtered}
-                keyExtractor={(row) => row.id}
-                emptyMessage="No hay registros de producción"
-            />
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <DataTable
+                    columns={columns}
+                    data={paged}
+                    keyExtractor={(row) => row.id}
+                    emptyMessage="No hay registros de producción"
+                />
+                <Pagination
+                    page={page}
+                    pageSize={pageSize}
+                    total={filtered.length}
+                    onPageChange={setPage}
+                    onPageSizeChange={setPageSize}
+                />
+            </div>
 
             <Modal
                 open={modalOpen}

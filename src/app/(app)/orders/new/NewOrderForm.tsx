@@ -100,12 +100,6 @@ export function NewOrderForm({
         setInstalacion(String(getPrice(getItemId('Instalación Base'))));
     }, [provinceId, channel, priceListId]);
 
-    // Auto-fill Default Price List when Channel is REVENDEDOR
-    useEffect(() => {
-        if (channel === 'REVENDEDOR' && !priceListId && resellerLists?.length > 0) {
-            setPriceListId(resellerLists[0].id);
-        }
-    }, [channel, resellerLists, priceListId]);
 
     function handleClientChange(id: string) {
         setClientId(id);
@@ -168,6 +162,7 @@ export function NewOrderForm({
                 channel: channel,
                 seller_id: sellerId || null,
                 reseller_id: channel === 'REVENDEDOR' ? (resellerId || null) : null,
+                price_list_id: channel === 'REVENDEDOR' ? (priceListId || null) : null,
                 installer_id: channel === 'REVENDEDOR' ? null : null, // Default null for now
                 status: 'CONFIRMADO' as any,
                 discount_amount: Number(descuento) || 0,

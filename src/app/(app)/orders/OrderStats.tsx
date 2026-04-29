@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { FileText, DollarSign, Clock, CheckCircle, Truck } from 'lucide-react';
+import { FileText, DollarSign, Clock, CheckCircle } from 'lucide-react';
 import type { Order } from '@/lib/types/database';
 
 interface OrderStatsProps {
@@ -12,12 +12,11 @@ export function OrderStats({ orders }: OrderStatsProps) {
     const totalVentas = orders.reduce((sum, o) => sum + Number(o.total_net || 0), 0);
     const montoPendiente = orders.reduce((sum, o) => sum + (Number(o.total_net || 0) - Number(o.paid_amount || 0)), 0);
 
-    const enViajePedidos = orders.filter((o: any) => !!o.trip_id);
-    const enViajeTotal = enViajePedidos.reduce((sum: number, o: any) => sum + Number(o.total_net || 0), 0);
+    const facturacionReal = orders.reduce((sum, o) => sum + Number(o.paid_amount || 0), 0);
 
     const stats = [
         {
-            label: 'Facturación Total',
+            label: 'Facturación Esperada',
             value: `$${totalVentas.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`,
             icon: <DollarSign className="w-6 h-6" />,
             iconBg: 'bg-primary-100',
@@ -45,11 +44,11 @@ export function OrderStats({ orders }: OrderStatsProps) {
             iconColor: 'text-success-600',
         },
         {
-            label: `En Viaje (${enViajePedidos.length})`,
-            value: `$${enViajeTotal.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`,
-            icon: <Truck className="w-5 h-5" />,
-            iconBg: 'bg-violet-100',
-            iconColor: 'text-violet-600',
+            label: 'Facturación Real',
+            value: `$${facturacionReal.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`,
+            icon: <CheckCircle className="w-5 h-5" />,
+            iconBg: 'bg-emerald-100',
+            iconColor: 'text-emerald-600',
         },
     ];
 

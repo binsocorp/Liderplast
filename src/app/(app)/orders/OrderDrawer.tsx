@@ -34,7 +34,6 @@ export function OrderDrawer({ order, onClose, lookups }: OrderDrawerProps) {
     const overlayRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
     const [notes, setNotes] = useState('');
-    const [status, setStatus] = useState('');
     const [installerId, setInstallerId] = useState('');
     const [paidAmount, setPaidAmount] = useState(0);
     const [saving, setSaving] = useState(false);
@@ -42,7 +41,6 @@ export function OrderDrawer({ order, onClose, lookups }: OrderDrawerProps) {
     useEffect(() => {
         if (order) {
             setNotes(order.notes || '');
-            setStatus(order.status || 'CONFIRMADO');
             setInstallerId(order.installer_id || '');
             setPaidAmount(order.paid_amount || 0);
             document.body.style.overflow = 'hidden';
@@ -62,7 +60,6 @@ export function OrderDrawer({ order, onClose, lookups }: OrderDrawerProps) {
         try {
             await updateOrder(order.id, {
                 notes,
-                status: status as any,
                 installer_id: installerId || null,
                 paid_amount: Number(paidAmount) || 0
             });
@@ -104,33 +101,18 @@ export function OrderDrawer({ order, onClose, lookups }: OrderDrawerProps) {
                 <div className="flex-1 overflow-y-auto px-6 py-5 space-y-8">
                     {/* Status & Editing Section */}
                     <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-100 space-y-4 shadow-inner">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Estado del Pedido</label>
-                                <select
-                                    value={status}
-                                    onChange={(e) => setStatus(e.target.value)}
-                                    className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-700 focus:ring-2 focus:ring-primary-500/10 outline-none transition-all"
-                                >
-                                    <option value="CONFIRMADO">Confirmado</option>
-                                    <option value="EN_VIAJE">En Viaje</option>
-                                    <option value="EN_INSTALACION">Instalación en proceso</option>
-                                    <option value="COMPLETADO">Completado</option>
-                                </select>
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Instalador Asignado</label>
-                                <select
-                                    value={installerId}
-                                    onChange={(e) => setInstallerId(e.target.value)}
-                                    className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-700 focus:ring-2 focus:ring-primary-500/10 outline-none transition-all"
-                                >
-                                    <option value="">Sin Asignar</option>
-                                    {lookups.installers.map(i => (
-                                        <option key={i.id} value={i.id}>{i.name}</option>
-                                    ))}
-                                </select>
-                            </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Instalador Asignado</label>
+                            <select
+                                value={installerId}
+                                onChange={(e) => setInstallerId(e.target.value)}
+                                className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-700 focus:ring-2 focus:ring-primary-500/10 outline-none transition-all"
+                            >
+                                <option value="">Sin Asignar</option>
+                                {lookups.installers.map(i => (
+                                    <option key={i.id} value={i.id}>{i.name}</option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 
