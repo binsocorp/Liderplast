@@ -10,6 +10,7 @@ import { OrderStats } from './OrderStats';
 import { deleteOrder, archiveOrder, completeInstallation } from './actions';
 import Link from 'next/link';
 import { Pagination } from '@/components/ui/Pagination';
+import { BrandPickerModal } from '@/components/ui/BrandPickerModal';
 
 interface OrderRow {
     id: string;
@@ -63,6 +64,7 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
     const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban');
     const [actionModal, setActionModal] = useState<ActionModal | null>(null);
 
+    const [pickerUrl, setPickerUrl] = useState<string | null>(null);
     const [filterProvince, setFilterProvince] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
     const [filterSeller, setFilterSeller] = useState('');
@@ -138,6 +140,7 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
 
     return (
         <div className="space-y-6">
+            <BrandPickerModal baseUrl={pickerUrl} onClose={() => setPickerUrl(null)} />
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-black text-indigo-950 tracking-tight">Gestión de Pedidos</h1>
                 <div className="flex items-center gap-3">
@@ -349,7 +352,7 @@ export function OrdersClient({ orders, lookups }: OrdersClientProps) {
                                                             variant="secondary"
                                                             icon={<Printer className="w-4 h-4" />}
                                                             className="bg-indigo-50 border-indigo-100 text-indigo-700 hover:bg-indigo-100 font-bold"
-                                                            onClick={(e) => { e.stopPropagation(); window.location.href = `/api/orders/${order.id}/pdf`; }}
+                                                            onClick={(e) => { e.stopPropagation(); setPickerUrl(`/api/orders/${order.id}/pdf`); }}
                                                             title="Descargar Remito PDF"
                                                         />
                                                         <Button
@@ -591,7 +594,7 @@ function KanbanBoard({ orders, getCascoInfo, onSelectOrder, onDeleteOrder, onAct
                                             </div>
                                             <div className="flex gap-1">
                                                 <button
-                                                    onClick={(e) => { e.stopPropagation(); window.location.href = `/api/orders/${order.id}/pdf`; }}
+                                                    onClick={(e) => { e.stopPropagation(); setPickerUrl(`/api/orders/${order.id}/pdf`); }}
                                                     className="p-1.5 rounded-lg bg-indigo-50 text-indigo-500 hover:bg-indigo-100 transition-colors"
                                                     title="Descargar PDF"
                                                 >

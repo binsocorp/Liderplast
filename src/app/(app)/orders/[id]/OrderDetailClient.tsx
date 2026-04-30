@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Printer, Plus } from 'lucide-react';
+import { BrandPickerModal } from '@/components/ui/BrandPickerModal';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Input, Select } from '@/components/ui/FormInputs';
 import { Button } from '@/components/ui/Button';
@@ -28,6 +29,7 @@ export function OrderDetailClient({
     const router = useRouter();
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [pickerUrl, setPickerUrl] = useState<string | null>(null);
 
     // Helpers to init data
     const getItemQty = (name: string) => {
@@ -233,6 +235,7 @@ export function OrderDetailClient({
 
     return (
         <>
+            <BrandPickerModal baseUrl={pickerUrl} onClose={() => setPickerUrl(null)} />
             <div className="max-w-6xl mx-auto space-y-6 pt-6 pb-20 text-sm bg-white overflow-hidden">
                 {/* HEADERS ROW */}
                 <div className="flex items-center gap-4 border-b border-gray-100 pb-6 mb-2">
@@ -244,7 +247,7 @@ export function OrderDetailClient({
                     <div className="flex gap-2">
                         <Button
                             className="bg-indigo-900 border-indigo-900 text-white hover:bg-indigo-800 shadow-lg shadow-indigo-900/20 active:scale-95 transition-all flex items-center gap-2"
-                            onClick={() => { window.location.href = `/api/orders/${order.id}/pdf`; }}
+                            onClick={() => setPickerUrl(`/api/orders/${order.id}/pdf`)}
                         >
                             <Printer className="w-4 h-4" />
                             Descargar Remito

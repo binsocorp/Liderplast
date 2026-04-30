@@ -8,6 +8,7 @@ import { acceptQuotation, cancelQuotation, deleteQuotation } from '../actions';
 import type { QuotationWithRelations } from '@/lib/types/database';
 import { isQuotationExpired } from '@/lib/types/database';
 import { useToast } from '@/components/ui/Toast';
+import { BrandPickerModal } from '@/components/ui/BrandPickerModal';
 
 const formatCurrency = (val: number) =>
     new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(val);
@@ -39,6 +40,7 @@ interface Props {
 export function CotizacionDetailClient({ quotation, convertedOrderNumber }: Props) {
     const router = useRouter();
     const { addToast } = useToast();
+    const [pickerUrl, setPickerUrl] = useState<string | null>(null);
     const [loadingAccept, setLoadingAccept] = useState(false);
     const [loadingCancel, setLoadingCancel] = useState(false);
     const [loadingDelete, setLoadingDelete] = useState(false);
@@ -108,6 +110,7 @@ export function CotizacionDetailClient({ quotation, convertedOrderNumber }: Prop
 
     return (
         <div className="max-w-6xl mx-auto space-y-6">
+            <BrandPickerModal baseUrl={pickerUrl} onClose={() => setPickerUrl(null)} />
             {/* Header */}
             <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
@@ -126,14 +129,13 @@ export function CotizacionDetailClient({ quotation, convertedOrderNumber }: Prop
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <a
-                        href={`/api/cotizaciones/${quotation.id}/pdf`}
-                        download={`COT-${quotation.quotation_number}.pdf`}
+                    <button
+                        onClick={() => setPickerUrl(`/api/cotizaciones/${quotation.id}/pdf`)}
                         className="inline-flex items-center gap-2 h-9 px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-lg transition-colors"
                     >
                         <FileText className="w-4 h-4" />
                         Descargar PDF
-                    </a>
+                    </button>
                 </div>
             </div>
 

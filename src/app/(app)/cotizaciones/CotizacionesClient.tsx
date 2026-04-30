@@ -11,6 +11,7 @@ import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
 import { acceptQuotation, deleteQuotation } from './actions';
 import { useToast } from '@/components/ui/Toast';
 import { Pagination } from '@/components/ui/Pagination';
+import { BrandPickerModal } from '@/components/ui/BrandPickerModal';
 
 type StatusFilter = 'TODAS' | 'ACTIVAS' | 'ACEPTADAS' | 'RECHAZADAS' | 'VENCIDAS';
 
@@ -61,6 +62,7 @@ export function CotizacionesClient({
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
+    const [pickerUrl, setPickerUrl] = useState<string | null>(null);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('TODAS');
     const [sellerId, setSellerId] = useState('');
@@ -185,6 +187,7 @@ export function CotizacionesClient({
 
     return (
         <div className="space-y-4">
+            <BrandPickerModal baseUrl={pickerUrl} onClose={() => setPickerUrl(null)} />
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
@@ -381,14 +384,13 @@ export function CotizacionesClient({
                                                 >
                                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                                                 </Link>
-                                                <a
-                                                    href={`/api/cotizaciones/${q.id}/pdf`}
-                                                    download={`COT-${q.quotation_number}.pdf`}
+                                                <button
+                                                    onClick={() => setPickerUrl(`/api/cotizaciones/${q.id}/pdf`)}
                                                     className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
                                                     title="Descargar PDF"
                                                 >
                                                     <FileText className="w-4 h-4" />
-                                                </a>
+                                                </button>
                                                 {q.status === 'ACEPTADA' && q.converted_order_id && (
                                                     <Link
                                                         href={`/orders/${q.converted_order_id}`}

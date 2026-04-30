@@ -23,67 +23,35 @@ function formatDate(dateStr: string): string {
     }).format(new Date(dateStr));
 }
 
-function generateHTML(order: any, logoDataUrl: string): string {
+function generateHTML(order: any, logoDataUrl: string, brand: 'liderplast' | 'swimming' = 'liderplast'): string {
+    const brandName = brand === 'swimming' ? 'Swimming Pool' : 'Liderplast';
+    const brandTagline = brand === 'swimming' ? 'Piletas &amp; Accesorios' : 'Fábrica de Piletas';
     const subtotalItems = (order.items || []).reduce(
         (acc: number, item: any) => acc + Number(item.unit_price_net || 0) * (item.quantity || 0),
         0
     );
-    const totalServicios =
-        Number(order.freight_amount || 0) +
-        Number(order.installation_amount || 0) +
-        Number(order.travel_amount || 0);
-    const totalImpuestos =
-        Number(order.tax_amount_manual || 0) + Number(order.other_amount || 0);
+    const subtotalProducto = subtotalItems + Number(order.other_amount || 0);
+    const flete = Number(order.freight_amount || 0) + Number(order.travel_amount || 0);
+    const instalacion = Number(order.installation_amount || 0);
+    const impuestos = Number(order.tax_amount_manual || 0);
     const descuento = Number(order.discount_amount || 0);
 
-    const tableItemsCount = (order.items?.length || 0) + (totalServicios > 0 ? 1 : 0);
-    let cellPaddingY = '12px';
-    let fontSize = '14px';
-    if (tableItemsCount > 10) {
-        cellPaddingY = '4px';
-        fontSize = '10px';
-    } else if (tableItemsCount > 6) {
-        cellPaddingY = '6px';
-        fontSize = '11px';
-    }
+    const rowStyle = `padding: 12px 20px; font-size: 14px;`;
 
-    const rowStyle = `padding: ${cellPaddingY} 20px; font-size: ${fontSize};`;
+    const conceptRow = (label: string, amount: number, isNegative = false) => `
+        <tr style="background: white; border-bottom: 1px solid #F3F4F6;">
+            <td style="${rowStyle} font-weight: 700; color: #111827;">${label}</td>
+            <td style="${rowStyle} text-align: right; font-weight: 700; color: ${isNegative ? '#DC2626' : '#111827'};">
+                ${isNegative ? '-' : ''}${formatCurrency(amount)}
+            </td>
+        </tr>`;
 
     const tableRows = [
-        ...(order.items || []).map(
-            (item: any) => `
-            <tr style="background: white; border-bottom: 1px solid #F3F4F6;">
-                <td style="${rowStyle}"><p style="font-weight: 700; color: #111827;">${item.description}</p></td>
-                <td style="${rowStyle} text-align: center; font-weight: 700;">${item.quantity}</td>
-                <td style="${rowStyle} text-align: right; color: #4B5563;">${formatCurrency(Number(item.unit_price_net))}</td>
-                <td style="${rowStyle} text-align: right; font-weight: 700; color: #111827;">${formatCurrency(Number(item.unit_price_net) * item.quantity)}</td>
-            </tr>`
-        ),
-        totalServicios > 0
-            ? `<tr style="background: rgba(249,250,251,0.5); border-bottom: 1px solid #F3F4F6;">
-                <td style="${rowStyle}">
-                    <p style="font-weight: 700; color: #111827;">Servicios Logísticos e Instalación</p>
-                    <p style="font-size: 9px; color: #6B7280; font-style: italic; margin-top: 2px;">Incluye flete, instalación y viáticos</p>
-                </td>
-                <td style="${rowStyle} text-align: center; font-weight: 700;">1</td>
-                <td style="${rowStyle} text-align: right; color: #4B5563;">${formatCurrency(totalServicios)}</td>
-                <td style="${rowStyle} text-align: right; font-weight: 700; color: #111827;">${formatCurrency(totalServicios)}</td>
-            </tr>`
-            : '',
-    ].join('');
-
-    const summaryRows = [
-        `<div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
-            <span>Subtotal</span><span>${formatCurrency(subtotalItems + totalServicios)}</span>
-        </div>`,
-        `<div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
-            <span>Impuestos / Otros</span><span>${formatCurrency(totalImpuestos)}</span>
-        </div>`,
-        descuento > 0
-            ? `<div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px; font-weight: 700; color: #DC2626; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
-                <span>Descuento</span><span>-${formatCurrency(descuento)}</span>
-            </div>`
-            : '',
+        conceptRow('Subtotal Producto', subtotalProducto),
+        flete > 0 ? conceptRow('Flete', flete) : '',
+        instalacion > 0 ? conceptRow('Instalación', instalacion) : '',
+        impuestos > 0 ? conceptRow('Impuestos', impuestos) : '',
+        descuento > 0 ? conceptRow('Descuentos', descuento, true) : '',
     ].join('');
 
     return `<!DOCTYPE html>
@@ -117,11 +85,11 @@ html, body {
         <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 4px solid #111827; padding-bottom: 16px;">
             <div style="display: flex; align-items: center; gap: 16px;">
                 <div style="width: 80px; height: 80px; background: white; border-radius: 16px; border: 2px solid #F3F4F6; display: flex; align-items: center; justify-content: center; padding: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                    <img src="${logoDataUrl}" style="width: 100%; height: 100%; object-fit: contain;" alt="Liderplast">
+                    <img src="${logoDataUrl}" style="max-width: 64px; max-height: 64px; display: block;" alt="${brandName}">
                 </div>
                 <div>
-                    <h1 style="font-size: 36px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.05em; color: #111827;">Liderplast</h1>
-                    <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #9CA3AF;">Fábrica de Piletas &amp; Logística</p>
+                    <h1 style="font-size: 36px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.05em; color: #111827;">${brandName}</h1>
+                    <p style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #9CA3AF;">${brandTagline}</p>
                 </div>
             </div>
             <div style="text-align: right;">
@@ -158,10 +126,8 @@ html, body {
         <table style="width: 100%; text-align: left; border-collapse: collapse;">
             <thead style="background: #111827; color: white;">
                 <tr>
-                    <th style="padding: 8px 20px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em;">Descripción del Producto / Servicio</th>
-                    <th style="padding: 8px 20px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; text-align: center; width: 80px;">Cant.</th>
-                    <th style="padding: 8px 20px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; text-align: right; width: 110px;">Unitario</th>
-                    <th style="padding: 8px 20px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; text-align: right; width: 110px;">Subtotal</th>
+                    <th style="padding: 8px 20px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em;">Concepto</th>
+                    <th style="padding: 8px 20px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; text-align: right; width: 160px;">Importe</th>
                 </tr>
             </thead>
             <tbody>${tableRows}</tbody>
@@ -174,16 +140,13 @@ html, body {
             <div style="flex: 1; font-size: 10px; color: #9CA3AF; font-weight: 700; line-height: 1.6; max-width: 384px;">
                 <p>Este remito no es válido como factura.<br>La mercadería se entrega en las condiciones especificadas y el cliente manifiesta su conformidad con la recepción.</p>
             </div>
-            <div style="width: 288px; background: #F9FAFB; padding: 16px; border-radius: 16px; border: 2px solid #111827; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                ${summaryRows}
-                <div style="padding-top: 8px; margin-top: 4px; border-top: 1px solid #D1D5DB; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 12px; font-weight: 900; color: #030712; text-transform: uppercase; letter-spacing: 0.1em;">Total Final</span>
-                    <span style="font-size: 18px; font-weight: 900; color: #030712; letter-spacing: -0.05em;">${formatCurrency(Number(order.total_net))}</span>
-                </div>
+            <div style="width: 288px; background: #F9FAFB; padding: 16px; border-radius: 16px; border: 2px solid #111827; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 12px; font-weight: 900; color: #030712; text-transform: uppercase; letter-spacing: 0.1em;">Total Final</span>
+                <span style="font-size: 18px; font-weight: 900; color: #030712; letter-spacing: -0.05em;">${formatCurrency(Number(order.total_net))}</span>
             </div>
         </div>
         <div style="padding-top: 16px; margin-top: 16px; font-size: 10px; color: #9CA3AF; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; text-align: center; border-top: 1px dashed #E5E7EB;">
-            Gracias por confiar en Liderplast
+            Gracias por confiar en ${brandName}
         </div>
     </div>
 
@@ -193,10 +156,13 @@ html, body {
 }
 
 export async function GET(
-    _request: Request,
+    request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const brand = searchParams.get('brand') === 'swimming' ? 'swimming' : 'liderplast';
+
     const supabase = await createClient();
 
     const { data: order } = await (supabase.from('orders') as any)
@@ -215,14 +181,20 @@ export async function GET(
 
     let logoDataUrl = '';
     try {
-        const logoPath = path.join(process.cwd(), 'public', 'logo-institutional.png');
-        const logoBuffer = fs.readFileSync(logoPath);
-        logoDataUrl = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+        if (brand === 'swimming') {
+            const svgPath = path.join(process.cwd(), 'public', 'logo-swimming-pool.svg');
+            const svgContent = fs.readFileSync(svgPath, 'utf-8');
+            logoDataUrl = `data:image/svg+xml;base64,${Buffer.from(svgContent).toString('base64')}`;
+        } else {
+            const pngPath = path.join(process.cwd(), 'public', 'logo-institutional.png');
+            const pngBuffer = fs.readFileSync(pngPath);
+            logoDataUrl = `data:image/png;base64,${pngBuffer.toString('base64')}`;
+        }
     } catch {
         // logo fallback
     }
 
-    const html = generateHTML(order, logoDataUrl);
+    const html = generateHTML(order, logoDataUrl, brand);
 
     let browser;
     try {
